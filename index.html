@@ -383,8 +383,6 @@ document.getElementById('btnEntrar').onclick = function(){
     document.getElementById('app').classList.remove('oculto');
     document.getElementById('hSub').textContent = r.nombre;
     cargarSemanas();
-    google.script.run.withSuccessHandler(function(l){ S.biblio = l || []; })
-      .withFailureHandler(function(){ S.biblio = []; }).biblioteca(S.token);
     registrarAvisos(c);
   }).withFailureHandler(function(){
     b.disabled = false; b.textContent = 'Entrar';
@@ -594,12 +592,15 @@ function abrirRutina(){
   cAtras(function(){ abrirFicha(C.id); }, C.nombre);
   $('cRutina').innerHTML = '<div class="spin"></div>';
 
-  google.script.run.withSuccessHandler(function(l){ C.biblio = l || []; })
-    .withFailureHandler(function(){ C.biblio = []; }).bibliotecaCliente(C.token, C.id);
-
+  // Una detrás de otra, no a la vez: Apps Script encola las peticiones
+  // simultáneas del mismo usuario y la pantalla se queda esperando.
   google.script.run.withSuccessHandler(function(r){
     C.semanas = (r && r.semanas) || [];
     pintarRutina();
+    if (!C.biblio.length){
+      google.script.run.withSuccessHandler(function(l){ C.biblio = l || []; })
+        .withFailureHandler(function(){ C.biblio = []; }).bibliotecaCliente(C.token, C.id);
+    }
   }).withFailureHandler(caducada).rutinaCliente(C.token, C.id);
 }
 
@@ -883,6 +884,12 @@ function cargarSemanas(){
   google.script.run.withSuccessHandler(function(r){
     S.semanas = r.semanas || [];
     pintarSemanas();
+    // La biblioteca después, no a la vez: Apps Script encola las
+    // peticiones simultáneas y se nota en lo que tarda en abrir.
+    if (!S.biblio.length){
+      google.script.run.withSuccessHandler(function(l){ S.biblio = l || []; })
+        .withFailureHandler(function(){ S.biblio = []; }).biblioteca(S.token);
+    }
   }).withFailureHandler(caducada).inicio(S.token);
 }
 
