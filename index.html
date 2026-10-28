@@ -370,14 +370,34 @@ if (LOGO_URL) {
     document.getElementById(id).innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
   });
 }
-document.getElementById('btnEntrar').onclick = function(){
-  var c = document.getElementById('inpCodigo').value.trim();
+/* ─────────────── la sesión se queda guardada ───────────────
+   El código se guarda en el propio móvil para no tener que escribirlo
+   cada vez que se recarga. Nunca sale de ahí: no viaja a ningún sitio
+   más de lo que ya viajaba al entrar. Se borra con "Salir".          */
+function recordar(clave, valor){
+  try {
+    if (valor === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, valor);
+  } catch (e) {}   // en modo incógnito no deja, y no pasa nada
+}
+function recordado(clave){
+  try { return localStorage.getItem(clave) || ''; } catch (e){ return ''; }
+}
+
+function entrarCon(c, callado){
+  c = String(c || '').trim();
   if (!c) return s2('avisoLogin','Escribe tu código.');
-  this.disabled = true; this.textContent = 'Entrando…';
-  var b = this;
+  var b = document.getElementById('btnEntrar');
+  b.disabled = true; b.textContent = 'Entrando…';
+
   google.script.run.withSuccessHandler(function(r){
     b.disabled = false; b.textContent = 'Entrar';
-    if (!r.ok) return s2('avisoLogin', r.msg);
+    if (!r.ok){
+      recordar('aj_cod', null);          // el código ya no vale
+      document.getElementById('login').classList.remove('oculto');
+      return s2('avisoLogin', r.msg);
+    }
+    recordar('aj_cod', c);
     S.token = r.token; S.nombre = r.nombre;
     document.getElementById('login').classList.add('oculto');
     document.getElementById('app').classList.remove('oculto');
@@ -386,13 +406,25 @@ document.getElementById('btnEntrar').onclick = function(){
     registrarAvisos(c);
   }).withFailureHandler(function(){
     b.disabled = false; b.textContent = 'Entrar';
-    s2('avisoLogin','Fallo de conexión. Inténtalo otra vez.');
+    document.getElementById('login').classList.remove('oculto');
+    if (!callado) s2('avisoLogin','Fallo de conexión. Inténtalo otra vez.');
   }).entrarPorCodigo(c);
+}
+
+document.getElementById('btnEntrar').onclick = function(){
+  entrarCon(document.getElementById('inpCodigo').value, false);
 };
+
+function salir(){
+  recordar('aj_cod', null);
+  recordar('aj_ent', null);
+  location.reload();
+}
 document.getElementById('inpCodigo').addEventListener('keyup', function(e){
   if (e.key === 'Enter') document.getElementById('btnEntrar').click();
 });
 initCoach();
+arrancar();
 
 /* ═══════════════ PANEL DE ENTRENADOR ═══════════════ */
 var C = { token:'', clientes:[], id:'', nombre:'', sem:1,
@@ -409,26 +441,46 @@ function verLoginCliente(){
 }
 
 function initCoach(){
-  $('btnEnt').onclick = function(){
-    var c = $('inpCodEnt').value;
-    if (!c) return s2('avisoEnt','Escribe tu código.');
-    var b = this; b.disabled = true; b.textContent = 'Entrando…';
-    google.script.run.withSuccessHandler(function(r){
-      b.disabled = false; b.textContent = 'Entrar';
-      if (!r.ok) return s2('avisoEnt', r.msg);
-      C.token = r.token;
-      $('loginEnt').classList.add('oculto');
-      $('coach').classList.remove('oculto');
-      if (LOGO_URL) $('logoCoach').innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
-      cargarPanel(false);
-    }).withFailureHandler(function(){
-      b.disabled = false; b.textContent = 'Entrar';
-      s2('avisoEnt','Fallo de conexión.');
-    }).entrarEntrenador(c);
-  };
+  $('btnEnt').onclick = function(){ entrarEntCon($('inpCodEnt').value, false); };
   $('inpCodEnt').addEventListener('keyup', function(e){
     if (e.key === 'Enter') $('btnEnt').click();
   });
+}
+
+function entrarEntCon(c, callado){
+  c = String(c || '').trim();
+  if (!c) return s2('avisoEnt','Escribe tu código.');
+  var b = $('btnEnt'); b.disabled = true; b.textContent = 'Entrando…';
+  google.script.run.withSuccessHandler(function(r){
+    b.disabled = false; b.textContent = 'Entrar';
+    if (!r.ok){
+      recordar('aj_ent', null);
+      $('login').classList.add('oculto');
+      $('loginEnt').classList.remove('oculto');
+      return s2('avisoEnt', r.msg);
+    }
+    recordar('aj_ent', c);
+    C.token = r.token;
+    $('login').classList.add('oculto');
+    $('loginEnt').classList.add('oculto');
+    $('coach').classList.remove('oculto');
+    if (LOGO_URL) $('logoCoach').innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
+    cargarPanel(false);
+  }).withFailureHandler(function(){
+    b.disabled = false; b.textContent = 'Entrar';
+    $('login').classList.add('oculto');
+    $('loginEnt').classList.remove('oculto');
+    if (!callado) s2('avisoEnt','Fallo de conexión.');
+  }).entrarEntrenador(c);
+}
+
+/* Al abrir: si ya entró antes en este móvil, entra solo. */
+function arrancar(){
+  var cod = recordado('aj_cod'), ent = recordado('aj_ent');
+  if (!cod && !ent) return;
+  $('login').classList.add('oculto');   // que no parpadee el formulario
+  if (cod) entrarCon(cod, true);
+  else entrarEntCon(ent, true);
 }
 
 function cVer(id){
@@ -484,6 +536,9 @@ function cargarPanel(refrescar){
                (c.cumplimiento ? esc(c.cumplimiento) : '–')+'</b></div>'+
            '</div></div>';
     });
+    h += '<p class="meta" style="margin-top:26px">'+
+         '<a href="#" onclick="salir();return false" '+
+         'style="color:var(--gris);text-decoration:underline">Salir del panel</a></p>';
     $('cPanel').innerHTML = h;
   }).withFailureHandler(caducada).panelEntrenador(C.token, !!refrescar);
 }
@@ -917,6 +972,9 @@ function pintarSemanas(){
            '</div></div>';
     });
   });
+  h += '<p class="meta" style="margin-top:26px">'+esc(S.nombre)+
+       ' · <a href="#" onclick="salir();return false" '+
+       'style="color:var(--gris);text-decoration:underline">Salir</a></p>';
   $('vSemanas').innerHTML = h;
   repasarAvisos();
 }
