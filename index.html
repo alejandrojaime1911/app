@@ -258,6 +258,10 @@ nav button.on .ic{background:var(--claro)}
     <section id="cPanel"><div class="spin"></div></section>
     <section id="cFicha" class="oculto"></section>
     <section id="cCuest" class="oculto"></section>
+    <section id="cRutina" class="oculto"></section>
+    <section id="cDia" class="oculto"></section>
+    <section id="cEj" class="oculto"></section>
+    <section id="cPicker" class="oculto"></section>
   </main>
 </div>
 
@@ -332,7 +336,9 @@ var _FUNCIONES = ['entrarPorCodigo','inicio','getDia','guardarEjercicio',
   'biblioteca','cambiarEjercicio','anadirEjercicio',
   'getCheckin','guardarCheckin','getCuestionario','guardarCuestionario',
   'entrarEntrenador','panelEntrenador','fichaCliente','cuestionarioCliente',
-  'guardarFeedback','apuntesCliente'];
+  'guardarFeedback','apuntesCliente',
+  'rutinaCliente','bibliotecaCliente','editarEjercicio',
+  'anadirEjercicioEnt','quitarEjercicio'];
 
 var google = { script: { run: (function crear(ok, fail) {
   var api = {
@@ -391,7 +397,8 @@ document.getElementById('inpCodigo').addEventListener('keyup', function(e){
 initCoach();
 
 /* ═══════════════ PANEL DE ENTRENADOR ═══════════════ */
-var C = { token:'', clientes:[], id:'', nombre:'', sem:1 };
+var C = { token:'', clientes:[], id:'', nombre:'', sem:1,
+          semanas:[], biblio:[], sem2:1, dia:1, idx:0, idx2:null };
 
 function verLoginEnt(){
   $('login').classList.add('oculto');
@@ -427,7 +434,7 @@ function initCoach(){
 }
 
 function cVer(id){
-  ['cPanel','cFicha','cCuest'].forEach(function(v){
+  ['cPanel','cFicha','cCuest','cRutina','cDia','cEj','cPicker'].forEach(function(v){
     $(v).classList.toggle('oculto', v !== id);
   });
   window.scrollTo(0,0);
@@ -492,7 +499,8 @@ function abrirFicha(id){
   google.script.run.withSuccessHandler(function(r){
     var h = '<h2>'+esc(r.nombre)+'</h2>';
 
-    h += '<button class="btn" onclick="abrirCuest('+C.sem+')">'+
+    h += '<button class="btn" onclick="abrirRutina()">Ver y editar su rutina</button>'+
+         '<button class="btn sec" onclick="abrirCuest('+C.sem+')">'+
          'Ver check-in de la semana '+C.sem+'</button>';
 
     if (r.avisos && r.avisos.length){
@@ -577,6 +585,238 @@ function abrirCuest(sem){
     }
     $('cCuest').innerHTML = h;
   }).withFailureHandler(caducada).cuestionarioCliente(C.token, C.id, sem);
+}
+
+/* ═══════════ el entrenador programa: rutina → día → ejercicio ═══════════ */
+
+function abrirRutina(){
+  cVer('cRutina');
+  cAtras(function(){ abrirFicha(C.id); }, C.nombre);
+  $('cRutina').innerHTML = '<div class="spin"></div>';
+
+  google.script.run.withSuccessHandler(function(l){ C.biblio = l || []; })
+    .withFailureHandler(function(){ C.biblio = []; }).bibliotecaCliente(C.token, C.id);
+
+  google.script.run.withSuccessHandler(function(r){
+    C.semanas = (r && r.semanas) || [];
+    pintarRutina();
+  }).withFailureHandler(caducada).rutinaCliente(C.token, C.id);
+}
+
+function pintarRutina(){
+  var h = '<h2>Su rutina</h2>'+
+          '<p class="sub">Toca un día para ver y cambiar lo que le has puesto.</p>';
+  if (!C.semanas.length) h += '<div class="vacio">Su archivo no tiene rutina cargada.</div>';
+  C.semanas.forEach(function(s){
+    h += '<div class="semana-tit"><b>SEMANA '+s.n+'</b><span class="linea"></span></div>';
+    if (!s.dias.length) h += '<div class="vacio" style="padding:14px">Sin días.</div>';
+    s.dias.forEach(function(d){
+      var n = d.ejercicios.length;
+      var hechos = d.ejercicios.filter(function(e){
+        return e.s.some(function(x){ return x !== ''; }); }).length;
+      h += '<div class="card pulsable" onclick="abrirDiaEnt('+s.n+','+d.n+')">'+
+           '<div class="dia">'+
+             '<div class="dia-n'+(n && hechos===n?' full':'')+'">'+d.n+'</div>'+
+             '<div class="dia-txt"><b>Día '+d.n+(d.enfoque?' · '+esc(d.enfoque):'')+'</b>'+
+               '<small>'+n+' ejercicio'+(n===1?'':'s')+
+               (n ? ' · '+hechos+' hecho'+(hechos===1?'':'s') : '')+'</small></div>'+
+             '<div class="chev">›</div></div></div>';
+    });
+  });
+  $('cRutina').innerHTML = h;
+}
+
+function _diaEnt(semN, diaN){
+  for (var i=0;i<C.semanas.length;i++){
+    if (C.semanas[i].n !== semN) continue;
+    for (var d=0;d<C.semanas[i].dias.length;d++)
+      if (C.semanas[i].dias[d].n === diaN) return C.semanas[i].dias[d];
+  }
+  return null;
+}
+
+function abrirDiaEnt(semN, diaN){
+  C.sem2 = semN; C.dia = diaN;
+  var d = _diaEnt(semN, diaN);
+  cVer('cDia');
+  cAtras(function(){ abrirRutina(); }, 'Semana '+semN+' · Día '+diaN);
+  if (!d){ $('cDia').innerHTML = '<div class="vacio">No encuentro ese día.</div>'; return; }
+
+  var h = '<h2>Día '+diaN+(d.enfoque?' · '+esc(d.enfoque):'')+'</h2>'+
+          '<p class="sub">Semana '+semN+'. Toca un ejercicio para editarlo.</p>';
+  if (!d.ejercicios.length) h += '<div class="vacio">Este día está vacío.</div>';
+  d.ejercicios.forEach(function(e, i){
+    var pauta = [e.repsP, e.kgP ? e.kgP+' kg' : '', e.rirP ? 'RIR '+e.rirP : '',
+                 e.rpeP ? 'RPE '+e.rpeP : ''].filter(Boolean).join(' · ');
+    var real = e.s.filter(function(x){ return x !== ''; }).join(' · ');
+    var marca = '';
+    if (String(e.origen||'').indexOf('Cambiado') === 0) marca = ' <span class="pill warn">cambiado</span>';
+    else if (String(e.origen||'').indexOf('Añadido') === 0) marca = ' <span class="pill ok">extra</span>';
+    h += '<div class="card pulsable" onclick="abrirEjEnt('+i+')">'+
+         '<div class="cli-top"><b>'+esc(e.nombre)+marca+'</b><span class="chev">›</span></div>'+
+         (pauta ? '<div class="indic">Pautado: '+esc(pauta)+'</div>' : '')+
+         (real ? '<div class="resp" style="margin-top:8px">Hizo: '+esc(real)+
+                 (e.kg ? '  ·  '+esc(e.kg)+' kg' : '')+'</div>' : '')+
+         (e.apunte ? '<div class="resp" style="margin-top:8px">'+esc(e.apunte)+'</div>' : '')+
+         '</div>';
+  });
+  h += '<button class="btn sec" onclick="pickerEnt(null)">+ Añadir un ejercicio</button>';
+  $('cDia').innerHTML = h;
+}
+
+function abrirEjEnt(i){
+  C.idx = i;
+  var d = _diaEnt(C.sem2, C.dia);
+  var e = d.ejercicios[i];
+  cVer('cEj');
+  cAtras(function(){ abrirDiaEnt(C.sem2, C.dia); }, 'Semana '+C.sem2+' · Día '+C.dia);
+
+  var h = '<h2>'+esc(e.nombre)+'</h2>'+
+          '<p class="sub">Lo que cambies aquí se escribe en su archivo al guardar.</p>'+
+          '<button class="btn sec" onclick="pickerEnt('+i+')">Cambiar el ejercicio</button>';
+
+  if (e.origen) h += '<p class="meta" style="margin-top:12px">'+esc(e.origen)+'</p>';
+
+  h += '<div class="semana-tit"><b>LO QUE LE PAUTAS</b><span class="linea"></span></div>'+
+       '<div class="card">'+
+         ce('p_reps','Repeticiones', e.repsP, 'text', '4 x 8-10')+
+         ce('p_kg','Kilos', e.kgP, 'text', '')+
+         ce('p_rir','RIR', e.rirP, 'text', '')+
+         ce('p_rpe','RPE', e.rpeP, 'text', '')+
+       '</div>';
+
+  h += '<div class="semana-tit"><b>LO QUE HA HECHO</b><span class="linea"></span></div>'+
+       '<p class="sub">Lo rellena él desde su app. Si lo entrenas presencial, '+
+       'puedes apuntarlo tú aquí.</p>'+
+       '<div class="card">'+
+         ce('r_s1','Serie 1', e.s[0], 'tel', '–')+
+         ce('r_s2','Serie 2', e.s[1], 'tel', '–')+
+         ce('r_s3','Serie 3', e.s[2], 'tel', '–')+
+         ce('r_s4','Serie 4', e.s[3], 'tel', '–')+
+         ce('r_kg','Kilos usados', e.kg, 'tel', '–')+
+         ce('r_rir','RIR', e.rir, 'tel', '–')+
+         ce('r_rpe','RPE', e.rpe, 'tel', '–')+
+       '</div>';
+
+  if (e.apunte)
+    h += '<div class="semana-tit"><b>SU APUNTE</b><span class="linea"></span></div>'+
+         '<div class="card"><div class="resp">'+esc(e.apunte)+'</div></div>';
+
+  h += '<button class="btn" id="btnEj" onclick="guardarEjEnt()">Guardar</button>'+
+       '<button class="btn sec" onclick="borrarEjEnt()" '+
+       'style="color:var(--rojo);border-color:var(--rojo)">Quitar este ejercicio</button>';
+
+  $('cEj').innerHTML = h;
+}
+
+function ce(id, lab, val, tipo, ph){
+  return '<div class="campo"><label>'+lab+'</label>'+
+         '<input id="'+id+'" class="ancho" type="'+tipo+'" value="'+esc(val||'')+
+         '" placeholder="'+esc(ph)+'"></div>';
+}
+
+function guardarEjEnt(){
+  var d = _diaEnt(C.sem2, C.dia), e = d.ejercicios[C.idx];
+  var datos = {
+    repsP: $('p_reps').value.trim(), kgP: $('p_kg').value.trim(),
+    rirP: $('p_rir').value.trim(), rpeP: $('p_rpe').value.trim(),
+    reales: true,
+    s1: $('r_s1').value.trim(), s2: $('r_s2').value.trim(),
+    s3: $('r_s3').value.trim(), s4: $('r_s4').value.trim(),
+    kg: $('r_kg').value.trim(), rir: $('r_rir').value.trim(), rpe: $('r_rpe').value.trim()
+  };
+  var b = $('btnEj'); b.disabled = true; b.textContent = 'Guardando…';
+  google.script.run.withSuccessHandler(function(){
+    e.repsP = datos.repsP; e.kgP = datos.kgP; e.rirP = datos.rirP; e.rpeP = datos.rpeP;
+    e.s = [datos.s1, datos.s2, datos.s3, datos.s4];
+    e.kg = datos.kg; e.rir = datos.rir; e.rpe = datos.rpe;
+    b.disabled = false; b.textContent = 'Guardar';
+    toast('Guardado ✓');
+    abrirDiaEnt(C.sem2, C.dia);
+  }).withFailureHandler(function(err){
+    b.disabled = false; b.textContent = 'Guardar'; caducada(err);
+  }).editarEjercicio(C.token, C.id, e.fila, datos);
+}
+
+function borrarEjEnt(){
+  var d = _diaEnt(C.sem2, C.dia), e = d.ejercicios[C.idx];
+  if (!confirm('¿Quitar "'+e.nombre+'" del día '+C.dia+'?\n\nSe borra también lo que hubiera apuntado en esa fila.')) return;
+  toast('Quitando…');
+  google.script.run.withSuccessHandler(function(){
+    toast('Quitado ✓');
+    abrirRutinaYVolver();
+  }).withFailureHandler(caducada).quitarEjercicio(C.token, C.id, e.fila);
+}
+
+/* Recarga la rutina y vuelve al día, para que los números cuadren. */
+function abrirRutinaYVolver(){
+  var s = C.sem2, dd = C.dia;
+  google.script.run.withSuccessHandler(function(r){
+    C.semanas = (r && r.semanas) || [];
+    abrirDiaEnt(s, dd);
+  }).withFailureHandler(caducada).rutinaCliente(C.token, C.id);
+}
+
+/* Buscador de la biblioteca en el panel. i = índice a sustituir, o null
+   si lo que quieres es añadir uno nuevo al día. */
+function pickerEnt(i){
+  C.idx2 = i;
+  cVer('cPicker');
+  cAtras(function(){ i === null ? abrirDiaEnt(C.sem2, C.dia) : abrirEjEnt(i); },
+         i === null ? 'Añadir ejercicio' : 'Cambiar ejercicio');
+  var h = '<h2>'+(i === null ? 'Añadir ejercicio' : 'Cambiar ejercicio')+'</h2>'+
+          '<p class="sub">Semana '+C.sem2+' · Día '+C.dia+'</p>'+
+          '<div class="card" style="padding:12px">'+
+            '<input id="bEnt" type="search" placeholder="Escribe para buscar…" '+
+            'autocomplete="off" oninput="pintarPickerEnt(this.value)" '+
+            'style="width:100%;height:46px;border:1.5px solid var(--borde);'+
+            'border-radius:12px;padding:0 14px"></div><div id="lEnt"></div>';
+  $('cPicker').innerHTML = h;
+  pintarPickerEnt('');
+  var inp = $('bEnt'); if (inp) inp.focus();
+}
+
+function pintarPickerEnt(q){
+  var t = norm(q || '');
+  var l = (C.biblio||[]).filter(function(x){
+    if (!t) return true;
+    return norm(x.n).indexOf(t) >= 0 || norm(x.g).indexOf(t) >= 0 || norm(x.m).indexOf(t) >= 0;
+  });
+  var tope = l.slice(0, 60);
+  var h = '';
+  if (!(C.biblio||[]).length) h = '<div class="vacio">No he podido cargar su biblioteca.</div>';
+  else if (!tope.length) h = '<div class="vacio">Ningún ejercicio con eso.</div>';
+  else tope.forEach(function(x, i){
+    h += '<div class="card pulsable" style="padding:13px 16px" onclick="elegirEnt('+i+')">'+
+         '<div class="ej"><div class="ej-txt"><b>'+esc(x.n)+'</b>'+
+         (x.g ? '<small>'+esc(x.g)+(x.m ? ' · '+esc(x.m) : '')+'</small>' : '')+
+         '</div><div class="chev">›</div></div></div>';
+  });
+  if (l.length > tope.length)
+    h += '<div class="vacio" style="padding:14px">Hay '+(l.length-tope.length)+
+         ' más. Afina la búsqueda.</div>';
+  window._pickEnt = tope;
+  $('lEnt').innerHTML = h;
+}
+
+function elegirEnt(i){
+  var x = window._pickEnt[i];
+  if (!x) return;
+  if (C.idx2 === null){
+    toast('Añadiendo…');
+    google.script.run.withSuccessHandler(function(r){
+      if (r && r.ok === false) return toast(r.msg || 'No se ha podido');
+      toast('Añadido ✓');
+      abrirRutinaYVolver();
+    }).withFailureHandler(caducada).anadirEjercicioEnt(C.token, C.id, C.sem2, C.dia, x.n);
+  } else {
+    var d = _diaEnt(C.sem2, C.dia), e = d.ejercicios[C.idx2];
+    toast('Cambiando…');
+    google.script.run.withSuccessHandler(function(){
+      toast('Cambiado ✓');
+      abrirRutinaYVolver();
+    }).withFailureHandler(caducada).editarEjercicio(C.token, C.id, e.fila, { nombre: x.n });
+  }
 }
 
 function guardarFb(){
