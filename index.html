@@ -44,6 +44,10 @@ header{
 .h-tit{font-weight:700;font-size:17px;line-height:1.15}
 .h-sub{font-size:12px;color:#9FD9BC;letter-spacing:.4px}
 .h-atras{margin-left:auto;font-size:14px;color:#9FD9BC;padding:6px 2px}
+.h-salir{margin-left:auto;font-size:13px;color:#9FD9BC;padding:6px 2px;
+  border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:5px 10px}
+.h-atras + .h-salir{margin-left:14px}
+.h-salir:active{background:rgba(255,255,255,.15)}
 
 main{padding:16px 16px 24px;max-width:620px;margin:0 auto}
 .oculto{display:none!important}
@@ -253,6 +257,7 @@ nav button.on .ic{background:var(--claro)}
       <div class="h-sub">PANEL DE ENTRENADOR</div>
     </div>
     <button class="h-atras oculto" id="cAtras">‹ Atrás</button>
+    <button class="h-salir" onclick="salir()">Salir</button>
   </header>
   <main>
     <section id="cPanel"><div class="spin"></div></section>
@@ -274,6 +279,7 @@ nav button.on .ic{background:var(--claro)}
       <div class="h-sub" id="hSub">AlexJaimeTrainer</div>
     </div>
     <button class="h-atras oculto" id="btnAtras">‹ Atrás</button>
+    <button class="h-salir" onclick="salir()">Salir</button>
   </header>
 
   <main>
@@ -416,6 +422,7 @@ document.getElementById('btnEntrar').onclick = function(){
 };
 
 function salir(){
+  if (!confirm('¿Cerrar la sesión?\n\nHabrá que volver a escribir el código para entrar.')) return;
   recordar('aj_cod', null);
   recordar('aj_ent', null);
   location.reload();
@@ -536,9 +543,6 @@ function cargarPanel(refrescar){
                (c.cumplimiento ? esc(c.cumplimiento) : '–')+'</b></div>'+
            '</div></div>';
     });
-    h += '<p class="meta" style="margin-top:26px">'+
-         '<a href="#" onclick="salir();return false" '+
-         'style="color:var(--gris);text-decoration:underline">Salir del panel</a></p>';
     $('cPanel').innerHTML = h;
   }).withFailureHandler(caducada).panelEntrenador(C.token, !!refrescar);
 }
@@ -972,9 +976,7 @@ function pintarSemanas(){
            '</div></div>';
     });
   });
-  h += '<p class="meta" style="margin-top:26px">'+esc(S.nombre)+
-       ' · <a href="#" onclick="salir();return false" '+
-       'style="color:var(--gris);text-decoration:underline">Salir</a></p>';
+  h += '<p class="meta" style="margin-top:26px">'+esc(S.nombre)+'</p>';
   $('vSemanas').innerHTML = h;
   repasarAvisos();
 }
