@@ -1033,7 +1033,14 @@ function cargarCuest(){
   s.defer = true;
   document.head.appendChild(s);
   window.OneSignalDeferred.push(function(OneSignal){
-    OneSignal.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: 'OneSignalSDKWorker.js' });
+    /* La app vive en /app/, no en la raíz. Si no se le dice, OneSignal
+       busca su archivo de servicio en la raíz del dominio, no lo encuentra
+       y la suscripción falla sin avisar. La ruta va desde la raíz. */
+    OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      serviceWorkerPath: 'app/OneSignalSDKWorker.js',
+      serviceWorkerParam: { scope: '/app/' }
+    });
   });
 })();
 
