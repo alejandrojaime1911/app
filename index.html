@@ -304,6 +304,11 @@ nav button.on .ic{background:var(--claro)}
 
 <div id="toast"></div>
 
+<!-- Avisos al móvil. Solo se carga si hay App ID puesto. -->
+<script>
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+</script>
+
 <script>
 /* ──────────────────────────────────────────────────────────────────────
    PUENTE CON GOOGLE
@@ -351,6 +356,10 @@ var google = { script: { run: (function crear(ok, fail) {
 /* ═══════════════ PEGA AQUÍ EL ENLACE DE TU LOGO (opcional) ═══════════════ */
 var LOGO_URL = 'logo.png';   // ej: 'https://lh3.googleusercontent.com/d/ID_DEL_ARCHIVO'
 
+/* App ID de OneSignal, para las notificaciones al móvil.
+   Si se deja vacío, la app funciona igual pero sin avisos. */
+var ONESIGNAL_APP_ID = '';
+
 var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0,
           pestana:'entreno', biblio:[], destino:null };
 
@@ -375,6 +384,7 @@ document.getElementById('btnEntrar').onclick = function(){
     cargarSemanas();
     google.script.run.withSuccessHandler(function(l){ S.biblio = l || []; })
       .withFailureHandler(function(){ S.biblio = []; }).biblioteca(S.token);
+    registrarAvisos(c);
   }).withFailureHandler(function(){
     b.disabled = false; b.textContent = 'Entrar';
     s2('avisoLogin','Fallo de conexión. Inténtalo otra vez.');
@@ -811,6 +821,25 @@ function guardarEj(siguiente){
   }).guardarEjercicio(S.token, e.fila, d);
 }
 
+/* ─────────────── avisos al móvil ───────────────
+   Se pide el permiso después de entrar, no al abrir: si lo pides antes
+   de que vea nada, la mayoría le da a "bloquear" y ya no hay vuelta atrás.
+   El cliente queda identificado por su código, que es a quien apunta
+   el servidor cuando manda el aviso.                                      */
+function registrarAvisos(codigo){
+  if (!ONESIGNAL_APP_ID || !window.OneSignalDeferred) return;
+  window.OneSignalDeferred.push(function(OneSignal){
+    OneSignal.login(String(codigo)).catch(function(){});
+    // pequeño margen para que no se le eche encima nada más entrar
+    setTimeout(function(){
+      try {
+        if (OneSignal.Notifications.permission) return;   // ya lo tiene dado
+        OneSignal.Slidedown.promptPush();
+      } catch (e) {}
+    }, 4000);
+  });
+}
+
 /* ─────────────── buscador de la biblioteca ─────────────── */
 function abrirPicker(titulo, sub, volver, alElegir){
   S.destino = alElegir;
@@ -963,6 +992,18 @@ function cargarCuest(){
     $('vCuest').innerHTML = h;
   }).withFailureHandler(caducada).getCuestionario(S.token, sem);
 }
+
+/* Carga el SDK de avisos solo si hay App ID, y lo arranca. */
+(function(){
+  if (!ONESIGNAL_APP_ID) return;
+  var s = document.createElement('script');
+  s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+  s.defer = true;
+  document.head.appendChild(s);
+  window.OneSignalDeferred.push(function(OneSignal){
+    OneSignal.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: 'OneSignalSDKWorker.js' });
+  });
+})();
 
 function guardarCuest(n){
   var out = [];
