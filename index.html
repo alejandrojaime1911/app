@@ -315,7 +315,6 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
    Esta pantalla no vive dentro de Google. Habla con Apps Script por fetch,
    sin sesión de Google de por medio, así que da igual cuántas cuentas
    tenga el cliente en el móvil.
-   Imita a google.script.run para no tener que tocar el resto del código.
    ────────────────────────────────────────────────────────────────────── */
 var API_URL = 'https://script.google.com/macros/s/AKfycbwYxh993dD0iieLgOoxDOEDxvLjZWo7kWQtW1NrcHE8GpKMSAnKa5_tV2ckaSQGHZir/exec';
 
@@ -358,7 +357,7 @@ var LOGO_URL = 'logo.png';   // ej: 'https://lh3.googleusercontent.com/d/ID_DEL_
 
 /* App ID de OneSignal, para las notificaciones al móvil.
    Si se deja vacío, la app funciona igual pero sin avisos. */
-var ONESIGNAL_APP_ID = '';
+var ONESIGNAL_APP_ID = 'a2fb0c0f-b539-4454-8345-95e1075e43e6';
 
 var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0,
           pestana:'entreno', biblio:[], destino:null };
