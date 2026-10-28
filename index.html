@@ -172,6 +172,23 @@ nav button.on .ic{background:var(--claro)}
   font-size:14px;text-align:center;margin-bottom:16px;font-weight:600}
 .vacio{text-align:center;color:var(--gris);padding:34px 16px;font-size:14.5px}
 
+/* fotos de progreso */
+.fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.foto{position:relative;aspect-ratio:3/4;border:1.5px dashed var(--borde);
+  border-radius:12px;background:var(--claro2);overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;text-align:center;padding:6px}
+.foto:active{border-color:var(--medio)}
+.foto.puesta{border-style:solid;border-color:var(--medio)}
+.foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.foto .mas{font-size:26px;color:var(--medio);line-height:1}
+.foto .et{font-size:12px;font-weight:700;color:var(--gris);margin-top:4px;
+  text-transform:uppercase;letter-spacing:.3px}
+.foto .pie{position:absolute;left:0;right:0;bottom:0;background:rgba(19,99,58,.82);
+  color:#fff;font-size:11px;font-weight:700;padding:4px 2px;letter-spacing:.3px;
+  text-transform:uppercase}
+.foto input{display:none}
+
 #toast{position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
   bottom:calc(88px + var(--safe-b));background:var(--oscuro);color:#fff;
   padding:13px 22px;border-radius:30px;font-size:14.5px;font-weight:600;z-index:90;
@@ -339,12 +356,12 @@ function _llamar(fn, args, ok, fail) {
 }
 
 var _FUNCIONES = ['entrarPorCodigo','inicio','getDia','guardarEjercicio',
-  'biblioteca','cambiarEjercicio','anadirEjercicio',
-  'getCheckin','guardarCheckin','getCuestionario','guardarCuestionario',
-  'entrarEntrenador','panelEntrenador','fichaCliente','cuestionarioCliente',
-  'guardarFeedback','apuntesCliente',
-  'rutinaCliente','bibliotecaCliente','editarEjercicio',
-  'anadirEjercicioEnt','quitarEjercicio'];
+  'biblioteca','cambiarEjercicio','anadirEjercicio','getCheckin',
+  'guardarCheckin','getCuestionario','guardarCuestionario','entrarEntrenador',
+  'panelEntrenador','fichaCliente','cuestionarioCliente','guardarFeedback',
+  'apuntesCliente','rutinaCliente','bibliotecaCliente','editarEjercicio',
+  'anadirEjercicioEnt','quitarEjercicio','subirFoto','fotosSemana',
+  'verFoto','fotosCliente','verFotoEnt'];
 
 var google = { script: { run: (function crear(ok, fail) {
   var api = {
@@ -368,7 +385,7 @@ var LOGO_URL = 'logo.png';   // ej: 'https://lh3.googleusercontent.com/d/ID_DEL_
 var ONESIGNAL_APP_ID = 'a2fb0c0f-b539-4454-8345-95e1075e43e6';
 
 var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0,
-          pestana:'entreno', biblio:[], destino:null };
+          pestana:'entreno', biblio:[], destino:null, fotos:{} };
 
 /* ─────────────── arranque ─────────────── */
 if (LOGO_URL) {
@@ -601,9 +618,16 @@ function abrirFicha(id){
       h += '</div>';
     }
 
+    h += '<div class="semana-tit"><b>FOTOS · SEMANA '+C.sem+'</b>'+
+         '<span class="linea"></span></div>'+
+         '<div class="card"><div class="fotos" id="cFotos">'+
+         '<div class="vacio" style="grid-column:1/-1;padding:16px">Mirando…</div>'+
+         '</div></div>';
+
     h += '<a class="enlace" href="'+esc(r.url)+'" target="_blank" rel="noopener">'+
          'Abrir su archivo completo ↗</a>';
     $('cFicha').innerHTML = h;
+    cargarFotosEnt(C.sem);
   }).withFailureHandler(caducada).fichaCliente(C.token, id);
 }
 function norm(t){ return String(t||'').toUpperCase()
@@ -644,6 +668,50 @@ function abrirCuest(sem){
     }
     $('cCuest').innerHTML = h;
   }).withFailureHandler(caducada).cuestionarioCliente(C.token, C.id, sem);
+}
+
+/* ─────────────── las fotos del cliente, en el panel ─────────────── */
+function cargarFotosEnt(sem){
+  google.script.run.withSuccessHandler(function(r){
+    var c = $('cFotos');
+    if (!c) return;
+    var hay = r && r.ok && r.fotos;
+    var h = '';
+    TIPOS_FOTO.forEach(function(t){
+      var id = hay ? r.fotos[t[0]] : '';
+      if (id)
+        h += '<div class="foto puesta" id="cf_'+t[0]+'" onclick="verFotoEnt_(\''+
+             t[0]+'\',\''+id+'\')"><span class="mas">👁</span>'+
+             '<span class="et">'+t[1]+'</span></div>';
+      else
+        h += '<div class="foto"><span class="et">'+t[1]+'</span>'+
+             '<span class="et" style="color:var(--borde)">sin foto</span></div>';
+    });
+    if (!hay || !(r.fotos.FRENTE || r.fotos.ESPALDA || r.fotos.PERFIL))
+      h = '<div class="vacio" style="grid-column:1/-1;padding:16px">'+
+          'No ha subido fotos de esta semana.</div>';
+    c.innerHTML = h;
+  }).withFailureHandler(function(){
+    var c = $('cFotos');
+    if (c) c.innerHTML = '<div class="vacio" style="grid-column:1/-1;padding:16px">'+
+                         'No he podido mirar las fotos.</div>';
+  }).fotosCliente(C.token, C.id, sem);
+}
+
+function verFotoEnt_(tipo, foto){
+  var c = $('cf_'+tipo);
+  if (!c || c.dataset.cargando) return;
+  c.dataset.cargando = '1';
+  var m = c.querySelector('.mas'); if (m) m.textContent = '…';
+  google.script.run.withSuccessHandler(function(d){
+    c.dataset.cargando = '';
+    if (!d) { if (m) m.textContent = '👁'; return toast('No he podido abrirla'); }
+    c.innerHTML = '<img src="'+d+'" alt=""><span class="pie">'+esc(etiquetaDe(tipo))+'</span>';
+  }).withFailureHandler(function(err){
+    c.dataset.cargando = '';
+    if (m) m.textContent = '👁';
+    caducada(err);
+  }).verFotoEnt(C.token, C.id, foto);
 }
 
 /* ═══════════ el entrenador programa: rutina → día → ejercicio ═══════════ */
@@ -1319,8 +1387,10 @@ function cargarMedidas(){
               cm('m_brazo','Brazo (cm)', r.brazo)+
               cm('m_muslo','Muslo (cm)', r.muslo)+
             '</div>'+
-            '<button class="btn" id="btnMed" onclick="guardarMedidas()">Guardar</button>';
+            '<button class="btn" id="btnMed" onclick="guardarMedidas()">Guardar</button>'+
+            bloqueFotos();
     $('vMedidas').innerHTML = h;
+    cargarFotos(sem);
   }).withFailureHandler(caducada).getCheckin(S.token, sem);
 }
 function cm(id, lab, val){
@@ -1345,6 +1415,105 @@ function guardarMedidas(){
     cadera:$('m_cad').value.trim(), pecho:$('m_pecho').value.trim(),
     brazo:$('m_brazo').value.trim(), muslo:$('m_muslo').value.trim()
   });
+}
+
+/* ─────────────── fotos de progreso ───────────────
+   Se encogen en el propio móvil antes de subirlas: una foto de cámara
+   son varios megas y tardaría una eternidad por una conexión de gimnasio.
+   A 1280 px de lado largo se ve de sobra para comparar.               */
+var TIPOS_FOTO = [['FRENTE','Frente'], ['ESPALDA','Espalda'], ['PERFIL','Perfil']];
+
+function bloqueFotos(){
+  var h = '<div class="semana-tit"><b>FOTOS DE PROGRESO</b><span class="linea"></span></div>'+
+          '<p class="sub">Mismo sitio, misma luz, misma ropa y a la misma hora. '+
+          'Si no, no se pueden comparar.</p><div class="card"><div class="fotos">';
+  TIPOS_FOTO.forEach(function(t){
+    h += '<label class="foto" id="foto_'+t[0]+'">'+
+           '<span class="mas">+</span><span class="et">'+t[1]+'</span>'+
+           '<input type="file" accept="image/*" '+
+           'onchange="elegirFoto(\''+t[0]+'\', this)"></label>';
+  });
+  return h + '</div></div>';
+}
+
+function cargarFotos(sem){
+  google.script.run.withSuccessHandler(function(r){
+    if (!r || !r.ok) return;
+    S.fotos = r.fotos || {};
+    TIPOS_FOTO.forEach(function(t){
+      if (S.fotos[t[0]]) marcarFoto(t[0], t[1]);
+    });
+  }).withFailureHandler(function(){}).fotosSemana(S.token, sem);
+}
+
+function marcarFoto(tipo, etiqueta){
+  var c = $('foto_'+tipo);
+  if (!c) return;
+  c.classList.add('puesta');
+  var m = c.querySelector('.mas'); if (m) m.textContent = '✓';
+  var e = c.querySelector('.et'); if (e) e.textContent = etiqueta;
+}
+
+function elegirFoto(tipo, input){
+  var f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  if (!/^image\//.test(f.type)) return toast('Eso no es una foto');
+
+  var c = $('foto_'+tipo);
+  var m = c.querySelector('.mas');
+  if (m) m.textContent = '…';
+  toast('Preparando la foto…');
+
+  encoger(f, function(dataUrl){
+    if (!dataUrl){ if (m) m.textContent = '+'; return toast('No he podido leer la foto'); }
+    var sem = parseInt(($('m_sem') || {}).value || S.sem || 1, 10);
+    google.script.run.withSuccessHandler(function(r){
+      if (!r || !r.ok){ if (m) m.textContent = '+'; return toast((r && r.msg) || 'No se ha podido subir'); }
+      S.fotos = S.fotos || {};
+      S.fotos[tipo] = r.id;
+      c.innerHTML = '<img src="'+dataUrl+'" alt=""><span class="pie">'+
+                    esc(etiquetaDe(tipo))+'</span>'+
+                    '<input type="file" accept="image/*" '+
+                    'onchange="elegirFoto(\''+tipo+'\', this)">';
+      c.classList.add('puesta');
+      toast('Foto subida ✓');
+    }).withFailureHandler(function(err){
+      if (m) m.textContent = '+';
+      caducada(err);
+    }).subirFoto(S.token, sem, tipo, dataUrl);
+  });
+}
+
+function etiquetaDe(tipo){
+  for (var i=0;i<TIPOS_FOTO.length;i++) if (TIPOS_FOTO[i][0] === tipo) return TIPOS_FOTO[i][1];
+  return tipo;
+}
+
+/* Reduce la foto a 1280 px de lado largo y la deja en JPEG. */
+function encoger(file, cb){
+  var lector = new FileReader();
+  lector.onerror = function(){ cb(null); };
+  lector.onload = function(){
+    var img = new Image();
+    img.onerror = function(){ cb(null); };
+    img.onload = function(){
+      try {
+        var max = 1280;
+        var w = img.width, h = img.height;
+        if (w > max || h > max){
+          if (w > h) { h = Math.round(h * max / w); w = max; }
+          else { w = Math.round(w * max / h); h = max; }
+        }
+        var lienzo = document.createElement('canvas');
+        lienzo.width = w; lienzo.height = h;
+        lienzo.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(lienzo.toDataURL('image/jpeg', 0.82));
+      } catch (e) { cb(null); }
+    };
+    img.src = lector.result;
+  };
+  lector.readAsDataURL(file);
 }
 
 /* ─────────────── 5. cuestionario ─────────────── */
