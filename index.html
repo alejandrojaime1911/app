@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13633A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AJ Trainer</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="AJ Trainer">
+<style>
+/* ── PEGA AQUÍ EL ENLACE DE TU LOGO si lo quieres en la cabecera ──
+   Sube logo_aj.png a Drive, dale acceso público y usa el enlace directo.
+   Si lo dejas vacío sale el texto AJ. */
+:root{
+  --oscuro:#13633A; --oscuro2:#0E4C2C; --medio:#3BA776; --claro:#E8F5EC;
+  --claro2:#F4FAF6; --borde:#D4E6DB; --gris:#6B7A72; --texto:#152019;
+  --rojo:#C0564B; --sombra:0 2px 10px rgba(19,99,58,.08);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--claro2); color:var(--texto); font-size:16px; line-height:1.45;
+  padding-bottom:calc(76px + var(--safe-b));
+}
+button{font-family:inherit;font-size:inherit;border:0;background:none;cursor:pointer;color:inherit}
+input,textarea,select{font-family:inherit;font-size:16px}
+
+/* ── cabecera ── */
+header{
+  position:sticky;top:0;z-index:40;background:var(--oscuro);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 18px 14px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.14);
+}
+.logo{width:38px;height:38px;border-radius:10px;background:#fff;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:contain;padding:3px}
+.logo span{font-weight:800;font-style:italic;color:var(--oscuro);font-size:17px;letter-spacing:-1px}
+.h-tit{font-weight:700;font-size:17px;line-height:1.15}
+.h-sub{font-size:12px;color:#9FD9BC;letter-spacing:.4px}
+.h-atras{margin-left:auto;font-size:14px;color:#9FD9BC;padding:6px 2px}
+
+main{padding:16px 16px 24px;max-width:620px;margin:0 auto}
+.oculto{display:none!important}
+
+h2{font-size:19px;margin:4px 0 14px;font-weight:700}
+.sub{color:var(--gris);font-size:13.5px;margin:-8px 0 16px}
+
+/* ── tarjetas ── */
+.card{background:#fff;border:1px solid var(--borde);border-radius:14px;
+  padding:16px;margin-bottom:12px;box-shadow:var(--sombra)}
+.card.pulsable:active{transform:scale(.985)}
+
+.semana-tit{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
+.semana-tit b{font-size:15px;letter-spacing:.3px}
+.semana-tit .linea{flex:1;height:1px;background:var(--borde)}
+
+.dia{display:flex;align-items:center;gap:14px;width:100%;text-align:left}
+.dia-n{width:46px;height:46px;border-radius:12px;background:var(--claro);
+  color:var(--oscuro);font-weight:800;font-size:18px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center}
+.dia-n.full{background:var(--medio);color:#fff}
+.dia-txt{flex:1;min-width:0}
+.dia-txt b{display:block;font-size:16px}
+.dia-txt small{color:var(--gris);font-size:13px}
+.barra{height:5px;background:var(--claro);border-radius:3px;margin-top:7px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--medio);border-radius:3px;transition:width .3s}
+.chev{color:var(--medio);font-size:20px;flex:0 0 auto}
+
+/* ── ejercicio ── */
+.ej{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
+.ej-ok{width:26px;height:26px;border-radius:50%;flex:0 0 auto;border:2px solid var(--borde);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}
+.ej-ok.si{background:var(--medio);border-color:var(--medio)}
+.ej-txt{flex:1;min-width:0}
+.ej-txt b{display:block;font-size:15.5px;line-height:1.3}
+.ej-txt small{color:var(--gris);font-size:12.5px}
+
+.pauta{background:var(--claro);border-radius:10px;padding:10px 12px;margin:12px 0;
+  font-size:13.5px;color:var(--oscuro);display:flex;gap:16px;flex-wrap:wrap}
+.pauta div b{font-size:15px}
+.pauta div small{display:block;font-size:11px;color:var(--gris);letter-spacing:.3px;text-transform:uppercase}
+
+.anterior{border-left:3px solid var(--medio);background:var(--claro2);
+  padding:10px 12px;border-radius:0 10px 10px 0;margin-bottom:16px;font-size:14px}
+.anterior small{display:block;color:var(--gris);font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.anterior b{color:var(--oscuro);font-size:16px}
+
+.indic{font-size:13.5px;color:var(--gris);font-style:italic}
+.btn-video{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  background:var(--claro);color:var(--oscuro);font-weight:700;font-size:15px;
+  padding:14px;border-radius:12px;margin-bottom:12px;text-decoration:none}
+.btn-video:active{background:var(--medio);color:#fff}
+.btn-video .play{width:26px;height:26px;border-radius:50%;background:var(--oscuro);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;
+  padding-left:2px;flex:0 0 auto}
+.btn-video:active .play{background:#fff;color:var(--oscuro)}
+
+/* ── series ── */
+.serie{display:flex;align-items:center;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--claro)}
+.serie:last-of-type{border-bottom:0}
+.serie-n{width:64px;font-size:13px;color:var(--gris);font-weight:600;
+  text-transform:uppercase;letter-spacing:.3px}
+.stepper{margin-left:auto;display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:12px;background:var(--claro);
+  color:var(--oscuro);font-size:22px;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center}
+.stepper button:active{background:var(--medio);color:#fff}
+.stepper input{width:62px;height:44px;text-align:center;font-size:19px;font-weight:700;
+  border:1.5px solid var(--borde);border-radius:12px;color:var(--texto);background:#fff}
+
+.campo{display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--claro)}
+.campo:last-child{border-bottom:0}
+.campo label{font-size:14.5px;font-weight:600;flex:1}
+.campo input,.campo select{width:108px;height:44px;text-align:center;font-size:17px;
+  font-weight:600;border:1.5px solid var(--borde);border-radius:12px;background:#fff}
+.campo input.ancho{width:128px}
+
+textarea{width:100%;min-height:92px;border:1.5px solid var(--borde);border-radius:12px;
+  padding:12px;resize:vertical;line-height:1.5}
+textarea:focus,input:focus,select:focus{outline:0;border-color:var(--medio)}
+
+.btn{display:block;width:100%;background:var(--oscuro);color:#fff;font-weight:700;
+  font-size:16px;padding:16px;border-radius:14px;text-align:center;margin-top:8px}
+.btn:active{background:var(--oscuro2)}
+.btn.sec{background:#fff;color:var(--oscuro);border:1.5px solid var(--borde)}
+.btn:disabled{opacity:.5}
+
+.q-area{font-size:11px;font-weight:700;color:var(--medio);text-transform:uppercase;
+  letter-spacing:.6px;margin-bottom:4px}
+.q-txt{font-size:14.5px;font-weight:600;margin-bottom:10px;line-height:1.4}
+
+/* ── navegación inferior ── */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;
+  border-top:1px solid var(--borde);display:flex;
+  padding-bottom:var(--safe-b);box-shadow:0 -2px 14px rgba(19,99,58,.07)}
+nav button{flex:1;padding:11px 4px 9px;color:var(--gris);font-size:11px;
+  font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button.on{color:var(--oscuro)}
+nav button.on .ic{background:var(--claro)}
+.ic{width:34px;height:26px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:17px}
+
+/* ── login ── */
+.login{min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  padding:30px 22px;background:var(--oscuro);color:#fff}
+.login .marca{text-align:center;margin-bottom:34px}
+.login .logo{width:86px;height:86px;border-radius:22px;margin:0 auto 18px}
+.login .logo span{font-size:38px}
+.login h1{font-size:25px;margin:0;font-weight:800;font-style:italic}
+.login p{color:#9FD9BC;font-size:13.5px;margin:6px 0 0;letter-spacing:.4px}
+.login label{display:block;font-size:12.5px;color:#9FD9BC;margin:0 0 7px 3px;
+  text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.login select,.login input{width:100%;height:54px;border-radius:14px;border:0;
+  padding:0 16px;margin-bottom:18px;background:#fff;font-size:16.5px;color:var(--texto)}
+.login .btn{background:var(--medio)}
+.login .btn:active{background:#2F8A60}
+
+.aviso{background:#fff;color:var(--rojo);border-radius:12px;padding:12px;
+  font-size:14px;text-align:center;margin-bottom:16px;font-weight:600}
+.vacio{text-align:center;color:var(--gris);padding:34px 16px;font-size:14.5px}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
+  bottom:calc(88px + var(--safe-b));background:var(--oscuro);color:#fff;
+  padding:13px 22px;border-radius:30px;font-size:14.5px;font-weight:600;z-index:90;
+  transition:transform .25s;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:86vw;text-align:center}
+#toast.ver{transform:translateX(-50%) translateY(0)}
+
+.spin{width:26px;height:26px;border:3px solid var(--claro);border-top-color:var(--medio);
+  border-radius:50%;animation:g .7s linear infinite;margin:40px auto}
+@keyframes g{to{transform:rotate(360deg)}}
+
+/* ── panel de entrenador ── */
+.link-ent{display:block;text-align:center;color:#9FD9BC;font-size:13px;
+  margin-top:22px;padding:8px;text-decoration:underline}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;
+  border-radius:20px;letter-spacing:.2px;white-space:nowrap}
+.pill.ok{background:var(--claro);color:var(--oscuro)}
+.pill.warn{background:#FDF0D9;color:#9A6B16}
+.pill.bad{background:#FBE4E1;color:var(--rojo)}
+.cli-top{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.cli-top b{font-size:16.5px;flex:1;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.kpi{background:var(--claro2);border-radius:10px;padding:9px 10px;text-align:center}
+.kpi small{display:block;font-size:10.5px;color:var(--gris);text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:2px}
+.kpi b{font-size:16px;color:var(--oscuro)}
+.kpi b.n{color:var(--gris);font-weight:600}
+.meta{font-size:12.5px;color:var(--gris);text-align:center;margin:-4px 0 16px}
+.tabla{width:100%;border-collapse:collapse;font-size:13.5px}
+.tabla th{background:var(--oscuro);color:#fff;font-size:11px;padding:8px 6px;
+  text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+.tabla td{padding:9px 6px;border-bottom:1px solid var(--claro);text-align:center}
+.tabla td:first-child{text-align:left;font-weight:600}
+.dato{border-bottom:1px solid var(--claro);padding:11px 0}
+.dato:last-child{border-bottom:0}
+.dato small{display:block;font-size:10.5px;color:var(--medio);font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.dato span{font-size:14.5px;white-space:pre-wrap}
+.resp{background:var(--claro2);border-left:3px solid var(--medio);padding:10px 12px;
+  border-radius:0 10px 10px 0;font-size:14px;white-space:pre-wrap}
+.resp.vacia{color:var(--gris);font-style:italic;border-left-color:var(--borde)}
+.enlace{display:block;text-align:center;color:var(--oscuro);font-size:14px;
+  font-weight:600;padding:14px;text-decoration:none;border:1.5px solid var(--borde);
+  border-radius:12px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login" class="login">
+  <div class="marca">
+    <div class="logo" id="logoLogin"><span>AJ</span></div>
+    <h1>AlexJaimeTrainer</h1>
+    <p>SERVICIO DE ASESORÍAS</p>
+  </div>
+  <div id="avisoLogin" class="aviso oculto"></div>
+  <label>¿Quién eres?</label>
+  <select id="selCliente"><option>Cargando…</option></select>
+  <label>Tu código</label>
+  <input id="inpCodigo" type="tel" inputmode="numeric" maxlength="6" placeholder="4 cifras">
+  <button class="btn" id="btnEntrar">Entrar</button>
+  <a class="link-ent" href="#" onclick="verLoginEnt();return false">Soy el entrenador</a>
+</div>
+
+<!-- ══════════════ LOGIN ENTRENADOR ══════════════ -->
+<div id="loginEnt" class="login oculto">
+  <div class="marca">
+    <div class="logo" id="logoEnt"><span>AJ</span></div>
+    <h1>Panel</h1>
+    <p>ALEXJAIMETRAINER</p>
+  </div>
+  <div id="avisoEnt" class="aviso oculto"></div>
+  <label>Código de entrenador</label>
+  <input id="inpCodEnt" type="tel" inputmode="numeric" maxlength="8" placeholder="····">
+  <button class="btn" id="btnEnt">Entrar</button>
+  <a class="link-ent" href="#" onclick="verLoginCliente();return false">Volver</a>
+</div>
+
+<!-- ══════════════ APP ENTRENADOR ══════════════ -->
+<div id="coach" class="oculto">
+  <header>
+    <div class="logo" id="logoCoach"><span>AJ</span></div>
+    <div>
+      <div class="h-tit" id="cTit">Mis clientes</div>
+      <div class="h-sub">PANEL DE ENTRENADOR</div>
+    </div>
+    <button class="h-atras oculto" id="cAtras">‹ Atrás</button>
+  </header>
+  <main>
+    <section id="cPanel"><div class="spin"></div></section>
+    <section id="cFicha" class="oculto"></section>
+    <section id="cCuest" class="oculto"></section>
+  </main>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app" class="oculto">
+  <header>
+    <div class="logo" id="logoApp"><span>AJ</span></div>
+    <div>
+      <div class="h-tit" id="hTit">Mi entrenamiento</div>
+      <div class="h-sub" id="hSub">AlexJaimeTrainer</div>
+    </div>
+    <button class="h-atras oculto" id="btnAtras">‹ Atrás</button>
+  </header>
+
+  <main>
+    <!-- entreno: semanas -->
+    <section id="vSemanas"><div class="spin"></div></section>
+
+    <!-- entreno: lista de ejercicios del día -->
+    <section id="vDia" class="oculto"></section>
+
+    <!-- entreno: ficha del ejercicio -->
+    <section id="vEjercicio" class="oculto"></section>
+
+    <!-- medidas -->
+    <section id="vMedidas" class="oculto"></section>
+
+    <!-- cuestionario -->
+    <section id="vCuest" class="oculto"></section>
+  </main>
+
+  <nav>
+    <button id="nav1" class="on" onclick="irA('entreno')">
+      <span class="ic">🏋️</span>Entreno</button>
+    <button id="nav2" onclick="irA('medidas')">
+      <span class="ic">⚖️</span>Medidas</button>
+    <button id="nav3" onclick="irA('cuest')">
+      <span class="ic">📝</span>Check-in</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────────
+   PUENTE CON GOOGLE
+   Esta pantalla ya no vive dentro de Google. Habla con Apps Script por
+   fetch, sin sesión de Google de por medio, así que da igual cuántas
+   cuentas tenga el cliente en el móvil.
+   Imita a google.script.run para no tener que tocar el resto del código.
+   ────────────────────────────────────────────────────────────────────── */
+var API_URL = 'https://script.google.com/macros/s/AKfycbwYxh993dD0iieLgOoxDOEDxvLjZWo7kWQtW1NrcHE8GpKMSAnKa5_tV2ckaSQGHZir/exec';
+
+function _llamar(fn, args, ok, fail) {
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: fn, args: args })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (j) {
+    if (j && j.ok) { if (ok) ok(j.r); }
+    else { if (fail) fail(new Error((j && j.error) || 'Error del servidor')); }
+  })
+  .catch(function (e) { if (fail) fail(e); });
+}
+
+var _FUNCIONES = ['listaClientes','entrar','inicio','getDia','guardarEjercicio',
+  'getCheckin','guardarCheckin','getCuestionario','guardarCuestionario',
+  'entrarEntrenador','panelEntrenador','fichaCliente','cuestionarioCliente',
+  'guardarFeedback'];
+
+var google = { script: { run: (function crear(ok, fail) {
+  var api = {
+    withSuccessHandler: function (f) { return crear(f, fail); },
+    withFailureHandler: function (f) { return crear(ok, f); }
+  };
+  _FUNCIONES.forEach(function (n) {
+    api[n] = function () {
+      _llamar(n, Array.prototype.slice.call(arguments), ok, fail);
+    };
+  });
+  return api;
+})(null, null) } };
+</script>
+<script>
+/* ═══════════════ PEGA AQUÍ EL ENLACE DE TU LOGO (opcional) ═══════════════ */
+var LOGO_URL = 'logo.png';   // ej: 'https://lh3.googleusercontent.com/d/ID_DEL_ARCHIVO'
+
+var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0, pestana:'entreno' };
+
+/* ─────────────── arranque ─────────────── */
+if (LOGO_URL) {
+  ['logoLogin','logoApp'].forEach(function(id){
+    document.getElementById(id).innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
+  });
+}
+google.script.run.withSuccessHandler(function(l){
+  var s = document.getElementById('selCliente');
+  s.innerHTML = '<option value="">Elige tu nombre…</option>';
+  l.forEach(function(n){ s.innerHTML += '<option>'+esc(n)+'</option>'; });
+}).withFailureHandler(function(){
+  s2('avisoLogin','No consigo cargar la lista. Recarga la página.');
+}).listaClientes();
+
+document.getElementById('btnEntrar').onclick = function(){
+  var n = document.getElementById('selCliente').value;
+  var c = document.getElementById('inpCodigo').value;
+  if (!n) return s2('avisoLogin','Elige tu nombre.');
+  if (!c) return s2('avisoLogin','Escribe tu código.');
+  this.disabled = true; this.textContent = 'Entrando…';
+  var b = this;
+  google.script.run.withSuccessHandler(function(r){
+    b.disabled = false; b.textContent = 'Entrar';
+    if (!r.ok) return s2('avisoLogin', r.msg);
+    S.token = r.token; S.nombre = r.nombre;
+    document.getElementById('login').classList.add('oculto');
+    document.getElementById('app').classList.remove('oculto');
+    document.getElementById('hSub').textContent = r.nombre;
+    cargarSemanas();
+  }).withFailureHandler(function(){
+    b.disabled = false; b.textContent = 'Entrar';
+    s2('avisoLogin','Fallo de conexión. Inténtalo otra vez.');
+  }).entrar(n, c);
+};
+document.getElementById('inpCodigo').addEventListener('keyup', function(e){
+  if (e.key === 'Enter') document.getElementById('btnEntrar').click();
+});
+initCoach();
+
+/* ═══════════════ PANEL DE ENTRENADOR ═══════════════ */
+var C = { token:'', clientes:[], id:'', nombre:'', sem:1 };
+
+function verLoginEnt(){
+  $('login').classList.add('oculto');
+  $('loginEnt').classList.remove('oculto');
+  if (LOGO_URL) $('logoEnt').innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
+}
+function verLoginCliente(){
+  $('loginEnt').classList.add('oculto');
+  $('login').classList.remove('oculto');
+}
+
+function initCoach(){
+  $('btnEnt').onclick = function(){
+    var c = $('inpCodEnt').value;
+    if (!c) return s2('avisoEnt','Escribe tu código.');
+    var b = this; b.disabled = true; b.textContent = 'Entrando…';
+    google.script.run.withSuccessHandler(function(r){
+      b.disabled = false; b.textContent = 'Entrar';
+      if (!r.ok) return s2('avisoEnt', r.msg);
+      C.token = r.token;
+      $('loginEnt').classList.add('oculto');
+      $('coach').classList.remove('oculto');
+      if (LOGO_URL) $('logoCoach').innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
+      cargarPanel(false);
+    }).withFailureHandler(function(){
+      b.disabled = false; b.textContent = 'Entrar';
+      s2('avisoEnt','Fallo de conexión.');
+    }).entrarEntrenador(c);
+  };
+  $('inpCodEnt').addEventListener('keyup', function(e){
+    if (e.key === 'Enter') $('btnEnt').click();
+  });
+}
+
+function cVer(id){
+  ['cPanel','cFicha','cCuest'].forEach(function(v){
+    $(v).classList.toggle('oculto', v !== id);
+  });
+  window.scrollTo(0,0);
+}
+function cAtras(fn, titulo){
+  var b = $('cAtras');
+  b.classList.toggle('oculto', !fn);
+  b.onclick = fn || null;
+  $('cTit').textContent = titulo;
+}
+
+function cargarPanel(refrescar){
+  cVer('cPanel'); cAtras(null, 'Mis clientes');
+  $('cPanel').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    C.clientes = r.clientes || [];
+    var h = '<h2>Mis clientes</h2>'+
+            '<p class="meta">'+(r.cacheado ? 'Datos guardados · ' : 'Actualizado a las '+r.hora+' · ')+
+            '<a href="#" onclick="cargarPanel(true);return false" '+
+            'style="color:var(--oscuro);font-weight:600">Actualizar</a></p>';
+    if (!C.clientes.length)
+      h += '<div class="vacio">No hay clientes en la hoja Clientes AJ.</div>';
+    C.clientes.forEach(function(c){
+      if (!c.ok){
+        h += '<div class="card"><div class="cli-top"><b>'+esc(c.nombre)+'</b>'+
+             '<span class="pill bad">Sin acceso</span></div>'+
+             '<div style="font-size:12.5px;color:var(--gris)">'+esc(c.error||'')+'</div></div>';
+        return;
+      }
+      var pct = c.totales ? Math.round(c.sesiones*100/c.totales) : 0;
+      var estado = c.contestado
+        ? '<span class="pill ok">Check-in ✓</span>'
+        : '<span class="pill warn">Sin check-in</span>';
+      var cump = String(c.cumplimiento||'').replace('%','');
+      var n = parseInt(cump,10);
+      var clsC = isNaN(n) ? 'n' : '';
+      h += '<div class="card pulsable" onclick="abrirFicha(\''+c.id+'\')">'+
+           '<div class="cli-top"><b>'+esc(c.nombre)+'</b>'+estado+
+             '<span class="chev">›</span></div>'+
+           '<div class="kpis">'+
+             '<div class="kpi"><small>Semana '+c.semana+'</small>'+
+               '<b'+(pct===100?'':' class="n"')+'>'+c.sesiones+'/'+c.totales+'</b></div>'+
+             '<div class="kpi"><small>Peso</small><b'+(c.peso?'':' class="n"')+'>'+
+               (c.peso ? esc(c.peso) : '–')+'</b></div>'+
+             '<div class="kpi"><small>Cumplim.</small><b class="'+clsC+'">'+
+               (c.cumplimiento ? esc(c.cumplimiento) : '–')+'</b></div>'+
+           '</div></div>';
+    });
+    $('cPanel').innerHTML = h;
+  }).withFailureHandler(caducada).panelEntrenador(C.token, !!refrescar);
+}
+
+function abrirFicha(id){
+  C.id = id;
+  var c = C.clientes.filter(function(x){ return x.id === id; })[0] || {};
+  C.nombre = c.nombre || ''; C.sem = c.semana || 1;
+  cVer('cFicha'); cAtras(function(){ cargarPanel(false); }, C.nombre);
+  $('cFicha').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    var h = '<h2>'+esc(r.nombre)+'</h2>';
+
+    h += '<button class="btn" onclick="abrirCuest('+C.sem+')">'+
+         'Ver check-in de la semana '+C.sem+'</button>';
+
+    if (r.seguimiento && r.seguimiento.length > 1){
+      var cab = r.seguimiento[0], idx = [];
+      ['SEMANA','TONELAJE REAL (KG)','CUMPLIMIENTO','RPE MEDIO'].forEach(function(n){
+        for (var i=0;i<cab.length;i++) if (norm(cab[i])===norm(n)) idx.push(i);
+      });
+      h += '<div class="semana-tit"><b>CARGA POR SEMANA</b><span class="linea"></span></div>'+
+           '<div class="card" style="padding:4px 10px 10px"><table class="tabla"><tr>'+
+           '<th>Sem</th><th>Tonelaje</th><th>Cumpl.</th><th>RPE</th></tr>';
+      for (var f=1; f<r.seguimiento.length; f++){
+        var fila = r.seguimiento[f];
+        h += '<tr>'+idx.map(function(i){ return '<td>'+esc(fila[i]||'–')+'</td>'; }).join('')+'</tr>';
+      }
+      h += '</table></div>';
+    }
+
+    if (r.datos && r.datos.length){
+      h += '<div class="semana-tit"><b>FICHA</b><span class="linea"></span></div><div class="card">';
+      r.datos.forEach(function(d){
+        h += '<div class="dato"><small>'+esc(d.et)+'</small><span>'+esc(d.v)+'</span></div>';
+      });
+      h += '</div>';
+    }
+
+    h += '<a class="enlace" href="'+esc(r.url)+'" target="_blank" rel="noopener">'+
+         'Abrir su archivo completo ↗</a>';
+    $('cFicha').innerHTML = h;
+  }).withFailureHandler(caducada).fichaCliente(C.token, id);
+}
+function norm(t){ return String(t||'').toUpperCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+
+function abrirCuest(sem){
+  C.sem = sem;
+  cVer('cCuest');
+  cAtras(function(){ abrirFicha(C.id); }, C.nombre+' · Semana '+sem);
+  $('cCuest').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    if (!r.ok){ $('cCuest').innerHTML = '<div class="vacio">Sin cuestionario.</div>'; return; }
+    var h = '<h2>Check-in semana '+sem+'</h2>'+
+            '<div class="card"><div class="campo"><label>Semana</label>'+
+            '<select onchange="abrirCuest(parseInt(this.value,10))">'+
+            [1,2,3,4].map(function(i){
+              return '<option value="'+i+'"'+(i==sem?' selected':'')+'>Semana '+i+'</option>';
+            }).join('')+'</select></div></div>';
+
+    r.preguntas.forEach(function(p){
+      var vacia = !String(p.respuesta).trim();
+      h += '<div class="card"><div class="q-area">'+esc(p.area)+'</div>'+
+           '<div class="q-txt">'+esc(p.pregunta)+'</div>'+
+           '<div class="resp'+(vacia?' vacia':'')+'">'+
+           esc(vacia ? 'Sin responder' : p.respuesta)+'</div></div>';
+    });
+
+    var fb = r.feedback, aj = r.ajuste;
+    if (fb || aj){
+      h += '<div class="semana-tit"><b>TU RESPUESTA</b><span class="linea"></span></div>';
+      if (fb) h += '<div class="card"><div class="q-area">'+esc(fb.area)+'</div>'+
+                   '<textarea id="fb" data-fila="'+fb.fila+'" placeholder="Qué has visto esta semana…">'+
+                   esc(fb.respuesta)+'</textarea></div>';
+      if (aj) h += '<div class="card"><div class="q-area">'+esc(aj.area)+'</div>'+
+                   '<textarea id="aj" data-fila="'+aj.fila+'" placeholder="Qué cambiamos…">'+
+                   esc(aj.respuesta)+'</textarea></div>';
+      h += '<button class="btn" id="btnFb" onclick="guardarFb()">Guardar mi respuesta</button>';
+    }
+    $('cCuest').innerHTML = h;
+  }).withFailureHandler(caducada).cuestionarioCliente(C.token, C.id, sem);
+}
+
+function guardarFb(){
+  var l = [];
+  ['fb','aj'].forEach(function(id){
+    var t = $(id);
+    if (t) l.push({ fila: parseInt(t.dataset.fila,10), texto: t.value.trim() });
+  });
+  var b = $('btnFb'); b.disabled = true; b.textContent = 'Guardando…';
+  google.script.run.withSuccessHandler(function(){
+    b.disabled = false; b.textContent = 'Guardar mi respuesta';
+    toast('Enviado al cliente ✓');
+  }).withFailureHandler(function(e){
+    b.disabled = false; b.textContent = 'Guardar mi respuesta'; caducada(e);
+  }).guardarFeedback(C.token, C.id, C.sem, l);
+}
+
+/* ─────────────── helpers ─────────────── */
+function esc(t){ return String(t==null?'':t)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function s2(id,txt){ var e=document.getElementById(id); e.textContent=txt; e.classList.remove('oculto'); }
+function $(id){ return document.getElementById(id); }
+function toast(t){
+  var e = $('toast'); e.textContent = t; e.classList.add('ver');
+  clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('ver'); }, 2200);
+}
+function ver(id){
+  ['vSemanas','vDia','vEjercicio','vMedidas','vCuest'].forEach(function(v){
+    $(v).classList.toggle('oculto', v !== id);
+  });
+  window.scrollTo(0,0);
+}
+function atras(fn, titulo){
+  var b = $('btnAtras');
+  b.classList.toggle('oculto', !fn);
+  b.onclick = fn || null;
+  $('hTit').textContent = titulo;
+}
+function caducada(e){
+  if (String(e && e.message||'').indexOf('SESION_CADUCADA') >= 0){
+    toast('Sesión caducada, vuelve a entrar');
+    setTimeout(function(){ location.reload(); }, 1600);
+    return true;
+  }
+  toast('No he podido conectar');
+  return false;
+}
+
+/* ─────────────── navegación inferior ─────────────── */
+function irA(p){
+  S.pestana = p;
+  $('nav1').classList.toggle('on', p==='entreno');
+  $('nav2').classList.toggle('on', p==='medidas');
+  $('nav3').classList.toggle('on', p==='cuest');
+  if (p === 'entreno') { atras(null,'Mi entrenamiento'); ver('vSemanas'); }
+  if (p === 'medidas') cargarMedidas();
+  if (p === 'cuest')   cargarCuest();
+}
+
+/* ─────────────── 1. semanas y días ─────────────── */
+function cargarSemanas(){
+  ver('vSemanas');
+  $('vSemanas').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    S.semanas = r.semanas || [];
+    pintarSemanas();
+  }).withFailureHandler(caducada).inicio(S.token);
+}
+
+function pintarSemanas(){
+  atras(null, 'Mi entrenamiento');
+  if (!S.semanas.length){
+    $('vSemanas').innerHTML = '<div class="vacio">Tu entrenador todavía no ha '+
+      'cargado la rutina.<br>En cuanto la suba aparecerá aquí.</div>';
+    return;
+  }
+  var h = '<h2>Hola, '+esc(S.nombre.split(' ')[0])+'</h2>'+
+          '<p class="sub">Elige la sesión que vas a hacer hoy.</p>';
+  S.semanas.forEach(function(s){
+    h += '<div class="semana-tit"><b>SEMANA '+s.n+'</b><span class="linea"></span></div>';
+    s.dias.forEach(function(d){
+      var pct = d.total ? Math.round(d.hechos*100/d.total) : 0;
+      h += '<div class="card pulsable" onclick="abrirDia('+s.n+','+d.n+')">'+
+           '<div class="dia">'+
+             '<div class="dia-n'+(pct===100?' full':'')+'">'+(pct===100?'✓':d.n)+'</div>'+
+             '<div class="dia-txt"><b>Día '+d.n+(d.enfoque?' · '+esc(d.enfoque):'')+'</b>'+
+               '<small>'+d.hechos+' de '+d.total+' ejercicios</small>'+
+               '<div class="barra"><i style="width:'+pct+'%"></i></div></div>'+
+             '<div class="chev">›</div>'+
+           '</div></div>';
+    });
+  });
+  $('vSemanas').innerHTML = h;
+}
+
+/* ─────────────── 2. ejercicios del día ─────────────── */
+function abrirDia(sem, dia){
+  S.sem = sem; S.dia = dia;
+  ver('vDia');
+  $('vDia').innerHTML = '<div class="spin"></div>';
+  atras(function(){ cargarSemanas(); }, 'Semana '+sem+' · Día '+dia);
+  google.script.run.withSuccessHandler(function(r){
+    if (!r.ok){ $('vDia').innerHTML = '<div class="vacio">No encuentro ese día.</div>'; return; }
+    S.ejercicios = r.ejercicios;
+    var h = '<h2>Día '+dia+(r.enfoque?' · '+esc(r.enfoque):'')+'</h2>'+
+            '<p class="sub">Toca un ejercicio para apuntar tus series.</p>';
+    r.ejercicios.forEach(function(e, i){
+      var hecho = e.s.some(function(x){ return x !== ''; });
+      var det = hecho
+        ? e.s.filter(function(x){return x!=='';}).join(' · ') + (e.kg? '  ·  '+e.kg+' kg':'')
+        : (e.repsP || '') + (e.kgP ? '  ·  '+e.kgP+' kg' : '');
+      h += '<div class="card pulsable" onclick="abrirEj('+i+')"><div class="ej">'+
+           '<div class="ej-ok'+(hecho?' si':'')+'">'+(hecho?'✓':'')+'</div>'+
+           '<div class="ej-txt"><b>'+esc(e.nombre)+'</b><small>'+esc(det)+'</small></div>'+
+           '<div class="chev">›</div></div></div>';
+    });
+    $('vDia').innerHTML = h;
+  }).withFailureHandler(caducada).getDia(S.token, sem, dia);
+}
+
+/* ─────────────── 3. ficha del ejercicio ─────────────── */
+function abrirEj(i){
+  S.idx = i;
+  var e = S.ejercicios[i];
+  ver('vEjercicio');
+  atras(function(){ abrirDia(S.sem, S.dia); }, 'Ejercicio '+(i+1)+' de '+S.ejercicios.length);
+
+  var h = '<h2>'+esc(e.nombre)+'</h2>';
+
+  var p = [];
+  if (e.repsP) p.push(['Pautado', e.repsP]);
+  if (e.kgP)   p.push(['Kilos', e.kgP]);
+  if (e.rirP)  p.push(['RIR', e.rirP]);
+  if (e.rpeP)  p.push(['RPE', e.rpeP]);
+  if (p.length){
+    h += '<div class="pauta">';
+    p.forEach(function(x){ h += '<div><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'; });
+    h += '</div>';
+  }
+
+  if (e.anterior){
+    var ser = e.anterior.s.filter(function(x){return x!=='';}).join(' · ');
+    h += '<div class="anterior"><small>La semana pasada</small><b>'+esc(ser)+
+         (e.anterior.kg ? '  con  '+esc(e.anterior.kg)+' kg' : '')+'</b>'+
+         (e.anterior.rpe ? ' <span style="color:var(--gris);font-size:13px">(RPE '+
+            esc(e.anterior.rpe)+')</span>' : '')+'</div>';
+  }
+
+  h += '<div class="card">';
+  for (var k=0; k<4; k++){
+    h += '<div class="serie"><div class="serie-n">Serie '+(k+1)+'</div>'+
+         '<div class="stepper">'+
+           '<button onclick="paso('+k+',-1)">−</button>'+
+           '<input id="s'+k+'" type="tel" inputmode="numeric" value="'+esc(e.s[k])+'" '+
+                 'placeholder="–" onfocus="this.select()">'+
+           '<button onclick="paso('+k+',1)">+</button>'+
+         '</div></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="card">'+
+       '<div class="campo"><label>Kilos usados</label>'+
+         '<input id="kg" class="ancho" type="tel" inputmode="decimal" value="'+esc(e.kg)+'" placeholder="kg"></div>'+
+       '<div class="campo"><label>RIR <small style="color:var(--gris);font-weight:400">de la última serie</small></label>'+
+         sel('rir', e.rir, ['','0','1','2','3','4','5'])+'</div>'+
+       '<div class="campo"><label>RPE</label>'+
+         sel('rpe', e.rpe, ['','6','6.5','7','7.5','8','8.5','9','9.5','10'])+'</div>'+
+       '</div>';
+
+  if (e.video || e.indic){
+    h += '<div class="card">';
+    if (e.video)
+      h += '<a class="btn-video" href="'+esc(e.video)+'" target="_blank" rel="noopener">'+
+           '<span class="play">▶</span>Ver cómo se hace</a>';
+    if (e.indic) h += '<div class="indic">'+esc(e.indic)+'</div>';
+    h += '</div>';
+  }
+
+  h += '<button class="btn" id="btnGuardar" onclick="guardarEj()">Guardar</button>';
+  if (i < S.ejercicios.length-1)
+    h += '<button class="btn sec" onclick="guardarEj(true)">Guardar y siguiente ›</button>';
+
+  $('vEjercicio').innerHTML = h;
+}
+
+function sel(id, val, ops){
+  var h = '<select id="'+id+'">';
+  ops.forEach(function(o){
+    h += '<option value="'+o+'"'+(String(val)===o?' selected':'')+'>'+(o===''?'–':o)+'</option>';
+  });
+  return h + '</select>';
+}
+
+function paso(k, d){
+  var i = $('s'+k);
+  var v = parseInt(i.value, 10);
+  if (isNaN(v)) v = 0;
+  v += d; if (v < 0) v = 0;
+  i.value = v === 0 && d < 0 ? '' : v;
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+function guardarEj(siguiente){
+  var e = S.ejercicios[S.idx];
+  var d = {
+    s1:$('s0').value.trim(), s2:$('s1').value.trim(),
+    s3:$('s2').value.trim(), s4:$('s3').value.trim(),
+    kg:$('kg').value.trim(), rir:$('rir').value, rpe:$('rpe').value
+  };
+  var b = $('btnGuardar'); b.disabled = true; b.textContent = 'Guardando…';
+  google.script.run.withSuccessHandler(function(){
+    e.s = [d.s1,d.s2,d.s3,d.s4]; e.kg = d.kg; e.rir = d.rir; e.rpe = d.rpe;
+    b.disabled = false; b.textContent = 'Guardar';
+    toast('Guardado ✓');
+    if (siguiente && S.idx < S.ejercicios.length-1) abrirEj(S.idx+1);
+    else abrirDia(S.sem, S.dia);
+  }).withFailureHandler(function(err){
+    b.disabled = false; b.textContent = 'Guardar';
+    caducada(err);
+  }).guardarEjercicio(S.token, e.fila, d);
+}
+
+/* ─────────────── 4. medidas ─────────────── */
+function cargarMedidas(){
+  ver('vMedidas');
+  atras(null, 'Peso y medidas');
+  var sem = S.sem || 1;
+  $('vMedidas').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    var h = '<h2>Peso y medidas</h2><p class="sub">Siempre el mismo día, '+
+            'por la mañana, en ayunas y después del baño.</p>'+
+            '<div class="card"><div class="campo"><label>Semana</label>'+
+            selSem(sem)+'</div></div>'+
+            '<div class="card">'+
+              cm('m_peso','Peso (kg)', r.peso)+
+              cm('m_cint','Cintura (cm)', r.cintura)+
+              cm('m_cad','Cadera (cm)', r.cadera)+
+              cm('m_pecho','Pecho (cm)', r.pecho)+
+              cm('m_brazo','Brazo (cm)', r.brazo)+
+              cm('m_muslo','Muslo (cm)', r.muslo)+
+            '</div>'+
+            '<button class="btn" id="btnMed" onclick="guardarMedidas()">Guardar</button>';
+    $('vMedidas').innerHTML = h;
+  }).withFailureHandler(caducada).getCheckin(S.token, sem);
+}
+function cm(id, lab, val){
+  return '<div class="campo"><label>'+lab+'</label><input id="'+id+
+         '" type="tel" inputmode="decimal" value="'+esc(val)+'" placeholder="–"></div>';
+}
+function selSem(act){
+  var h = '<select id="m_sem" onchange="recargarMedidas()">';
+  for (var i=1;i<=4;i++) h += '<option value="'+i+'"'+(i==act?' selected':'')+'>Semana '+i+'</option>';
+  return h+'</select>';
+}
+function recargarMedidas(){ S.sem = parseInt($('m_sem').value,10); cargarMedidas(); }
+
+function guardarMedidas(){
+  var b = $('btnMed'); b.disabled = true; b.textContent = 'Guardando…';
+  google.script.run.withSuccessHandler(function(){
+    b.disabled = false; b.textContent = 'Guardar'; toast('Guardado ✓');
+  }).withFailureHandler(function(e){
+    b.disabled = false; b.textContent = 'Guardar'; caducada(e);
+  }).guardarCheckin(S.token, parseInt($('m_sem').value,10), {
+    peso:$('m_peso').value.trim(), cintura:$('m_cint').value.trim(),
+    cadera:$('m_cad').value.trim(), pecho:$('m_pecho').value.trim(),
+    brazo:$('m_brazo').value.trim(), muslo:$('m_muslo').value.trim()
+  });
+}
+
+/* ─────────────── 5. cuestionario ─────────────── */
+function cargarCuest(){
+  ver('vCuest');
+  atras(null, 'Check-in semanal');
+  var sem = S.sem || 1;
+  $('vCuest').innerHTML = '<div class="spin"></div>';
+  google.script.run.withSuccessHandler(function(r){
+    if (!r.ok || !r.preguntas.length){
+      $('vCuest').innerHTML = '<div class="vacio">No encuentro el cuestionario en tu archivo.</div>';
+      return;
+    }
+    var h = '<h2>Check-in semanal</h2><p class="sub">Contesta con calma. '+
+            'Esto es lo que me deja ajustar tu plan.</p>'+
+            '<div class="card"><div class="campo"><label>Semana</label>'+
+            '<select id="q_sem" onchange="S.sem=parseInt(this.value,10);cargarCuest()">'+
+            [1,2,3,4].map(function(i){
+              return '<option value="'+i+'"'+(i==sem?' selected':'')+'>Semana '+i+'</option>';
+            }).join('')+'</select></div></div>';
+    r.preguntas.forEach(function(p, i){
+      h += '<div class="card"><div class="q-area">'+esc(p.area)+'</div>'+
+           '<div class="q-txt">'+esc(p.pregunta)+'</div>'+
+           '<textarea id="q'+i+'" data-fila="'+p.fila+'" '+
+           'placeholder="Escribe aquí…">'+esc(p.respuesta)+'</textarea></div>';
+    });
+    h += '<button class="btn" id="btnQ" onclick="guardarCuest('+r.preguntas.length+')">Enviar check-in</button>';
+    $('vCuest').innerHTML = h;
+  }).withFailureHandler(caducada).getCuestionario(S.token, sem);
+}
+
+function guardarCuest(n){
+  var out = [];
+  for (var i=0;i<n;i++){
+    var t = $('q'+i);
+    out.push({ fila: parseInt(t.dataset.fila,10), texto: t.value.trim() });
+  }
+  var b = $('btnQ'); b.disabled = true; b.textContent = 'Enviando…';
+  google.script.run.withSuccessHandler(function(){
+    b.disabled = false; b.textContent = 'Enviar check-in';
+    toast('Check-in enviado ✓');
+  }).withFailureHandler(function(e){
+    b.disabled = false; b.textContent = 'Enviar check-in'; caducada(e);
+  }).guardarCuestionario(S.token, parseInt($('q_sem').value,10), out);
+}
+</script>
+</body>
+</html>
