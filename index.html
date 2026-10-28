@@ -223,10 +223,9 @@ nav button.on .ic{background:var(--claro)}
     <p>SERVICIO DE ASESORÍAS</p>
   </div>
   <div id="avisoLogin" class="aviso oculto"></div>
-  <label>¿Quién eres?</label>
-  <select id="selCliente"><option>Cargando…</option></select>
   <label>Tu código</label>
-  <input id="inpCodigo" type="tel" inputmode="numeric" maxlength="6" placeholder="4 cifras">
+  <input id="inpCodigo" type="tel" inputmode="numeric" maxlength="8"
+         autocomplete="off" placeholder="6 cifras">
   <button class="btn" id="btnEntrar">Entrar</button>
   <a class="link-ent" href="#" onclick="verLoginEnt();return false">Soy el entrenador</a>
 </div>
@@ -283,6 +282,9 @@ nav button.on .ic{background:var(--claro)}
     <!-- entreno: ficha del ejercicio -->
     <section id="vEjercicio" class="oculto"></section>
 
+    <!-- buscador de la biblioteca -->
+    <section id="vPicker" class="oculto"></section>
+
     <!-- medidas -->
     <section id="vMedidas" class="oculto"></section>
 
@@ -305,9 +307,9 @@ nav button.on .ic{background:var(--claro)}
 <script>
 /* ──────────────────────────────────────────────────────────────────────
    PUENTE CON GOOGLE
-   Esta pantalla ya no vive dentro de Google. Habla con Apps Script por
-   fetch, sin sesión de Google de por medio, así que da igual cuántas
-   cuentas tenga el cliente en el móvil.
+   Esta pantalla no vive dentro de Google. Habla con Apps Script por fetch,
+   sin sesión de Google de por medio, así que da igual cuántas cuentas
+   tenga el cliente en el móvil.
    Imita a google.script.run para no tener que tocar el resto del código.
    ────────────────────────────────────────────────────────────────────── */
 var API_URL = 'https://script.google.com/macros/s/AKfycbwYxh993dD0iieLgOoxDOEDxvLjZWo7kWQtW1NrcHE8GpKMSAnKa5_tV2ckaSQGHZir/exec';
@@ -326,10 +328,11 @@ function _llamar(fn, args, ok, fail) {
   .catch(function (e) { if (fail) fail(e); });
 }
 
-var _FUNCIONES = ['listaClientes','entrar','inicio','getDia','guardarEjercicio',
+var _FUNCIONES = ['entrarPorCodigo','inicio','getDia','guardarEjercicio',
+  'biblioteca','cambiarEjercicio','anadirEjercicio',
   'getCheckin','guardarCheckin','getCuestionario','guardarCuestionario',
   'entrarEntrenador','panelEntrenador','fichaCliente','cuestionarioCliente',
-  'guardarFeedback'];
+  'guardarFeedback','apuntesCliente'];
 
 var google = { script: { run: (function crear(ok, fail) {
   var api = {
@@ -348,7 +351,8 @@ var google = { script: { run: (function crear(ok, fail) {
 /* ═══════════════ PEGA AQUÍ EL ENLACE DE TU LOGO (opcional) ═══════════════ */
 var LOGO_URL = 'logo.png';   // ej: 'https://lh3.googleusercontent.com/d/ID_DEL_ARCHIVO'
 
-var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0, pestana:'entreno' };
+var S = { token:'', nombre:'', semanas:[], sem:0, dia:0, ejercicios:[], idx:0,
+          pestana:'entreno', biblio:[], destino:null };
 
 /* ─────────────── arranque ─────────────── */
 if (LOGO_URL) {
@@ -356,18 +360,8 @@ if (LOGO_URL) {
     document.getElementById(id).innerHTML = '<img src="'+LOGO_URL+'" alt="AJ">';
   });
 }
-google.script.run.withSuccessHandler(function(l){
-  var s = document.getElementById('selCliente');
-  s.innerHTML = '<option value="">Elige tu nombre…</option>';
-  l.forEach(function(n){ s.innerHTML += '<option>'+esc(n)+'</option>'; });
-}).withFailureHandler(function(){
-  s2('avisoLogin','No consigo cargar la lista. Recarga la página.');
-}).listaClientes();
-
 document.getElementById('btnEntrar').onclick = function(){
-  var n = document.getElementById('selCliente').value;
-  var c = document.getElementById('inpCodigo').value;
-  if (!n) return s2('avisoLogin','Elige tu nombre.');
+  var c = document.getElementById('inpCodigo').value.trim();
   if (!c) return s2('avisoLogin','Escribe tu código.');
   this.disabled = true; this.textContent = 'Entrando…';
   var b = this;
@@ -379,10 +373,12 @@ document.getElementById('btnEntrar').onclick = function(){
     document.getElementById('app').classList.remove('oculto');
     document.getElementById('hSub').textContent = r.nombre;
     cargarSemanas();
+    google.script.run.withSuccessHandler(function(l){ S.biblio = l || []; })
+      .withFailureHandler(function(){ S.biblio = []; }).biblioteca(S.token);
   }).withFailureHandler(function(){
     b.disabled = false; b.textContent = 'Entrar';
     s2('avisoLogin','Fallo de conexión. Inténtalo otra vez.');
-  }).entrar(n, c);
+  }).entrarPorCodigo(c);
 };
 document.getElementById('inpCodigo').addEventListener('keyup', function(e){
   if (e.key === 'Enter') document.getElementById('btnEntrar').click();
@@ -460,6 +456,9 @@ function cargarPanel(refrescar){
       var estado = c.contestado
         ? '<span class="pill ok">Check-in ✓</span>'
         : '<span class="pill warn">Sin check-in</span>';
+      if (c.avisos)
+        estado = '<span class="pill bad">'+c.avisos+' aviso'+(c.avisos>1?'s':'')+
+                 '</span>' + estado;
       var cump = String(c.cumplimiento||'').replace('%','');
       var n = parseInt(cump,10);
       var clsC = isNaN(n) ? 'n' : '';
@@ -490,6 +489,22 @@ function abrirFicha(id){
 
     h += '<button class="btn" onclick="abrirCuest('+C.sem+')">'+
          'Ver check-in de la semana '+C.sem+'</button>';
+
+    if (r.avisos && r.avisos.length){
+      h += '<div class="semana-tit"><b>LO QUE TE HA DEJADO ÉL</b>'+
+           '<span class="linea"></span></div>';
+      r.avisos.forEach(function(a){
+        var tipo = '';
+        if (String(a.origen||'').indexOf('Cambiado') === 0) tipo = '<span class="pill warn">cambiado</span>';
+        else if (String(a.origen||'').indexOf('Añadido') === 0) tipo = '<span class="pill ok">extra</span>';
+        h += '<div class="card"><div class="cli-top">'+
+               '<b>'+esc(a.ejercicio)+'</b>'+tipo+'</div>'+
+             '<div class="q-area">Semana '+a.sem+' · Día '+a.dia+'</div>';
+        if (a.origen) h += '<div class="indic" style="margin-bottom:8px">'+esc(a.origen)+'</div>';
+        if (a.apunte) h += '<div class="resp">'+esc(a.apunte)+'</div>';
+        h += '</div>';
+      });
+    }
 
     if (r.seguimiento && r.seguimiento.length > 1){
       var cab = r.seguimiento[0], idx = [];
@@ -584,7 +599,7 @@ function toast(t){
   clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('ver'); }, 2200);
 }
 function ver(id){
-  ['vSemanas','vDia','vEjercicio','vMedidas','vCuest'].forEach(function(v){
+  ['vSemanas','vDia','vEjercicio','vPicker','vMedidas','vCuest'].forEach(function(v){
     $(v).classList.toggle('oculto', v !== id);
   });
   window.scrollTo(0,0);
@@ -668,11 +683,16 @@ function abrirDia(sem, dia){
       var det = hecho
         ? e.s.filter(function(x){return x!=='';}).join(' · ') + (e.kg? '  ·  '+e.kg+' kg':'')
         : (e.repsP || '') + (e.kgP ? '  ·  '+e.kgP+' kg' : '');
+      var marca = '';
+      if (String(e.origen||'').indexOf('Cambiado') === 0) marca = '<span class="pill warn">cambiado</span>';
+      else if (String(e.origen||'').indexOf('Añadido') === 0) marca = '<span class="pill ok">extra</span>';
       h += '<div class="card pulsable" onclick="abrirEj('+i+')"><div class="ej">'+
            '<div class="ej-ok'+(hecho?' si':'')+'">'+(hecho?'✓':'')+'</div>'+
-           '<div class="ej-txt"><b>'+esc(e.nombre)+'</b><small>'+esc(det)+'</small></div>'+
+           '<div class="ej-txt"><b>'+esc(e.nombre)+' '+marca+'</b>'+
+             '<small>'+esc(det)+'</small></div>'+
            '<div class="chev">›</div></div></div>';
     });
+    h += '<button class="btn sec" onclick="pedirExtra()">+ Añadir un ejercicio</button>';
     $('vDia').innerHTML = h;
   }).withFailureHandler(caducada).getDia(S.token, sem, dia);
 }
@@ -726,6 +746,12 @@ function abrirEj(i){
          sel('rpe', e.rpe, ['','6','6.5','7','7.5','8','8.5','9','9.5','10'])+'</div>'+
        '</div>';
 
+  h += '<div class="card">'+
+       '<div class="q-area">¿Algo que contarme?</div>'+
+       '<textarea id="apunte" placeholder="Si te ha costado más de lo normal, '+
+       'si has notado alguna molestia, lo que sea. Lo leo yo.">'+
+       esc(e.apunte || '')+'</textarea></div>';
+
   if (e.video || e.indic){
     h += '<div class="card">';
     if (e.video)
@@ -738,6 +764,10 @@ function abrirEj(i){
   h += '<button class="btn" id="btnGuardar" onclick="guardarEj()">Guardar</button>';
   if (i < S.ejercicios.length-1)
     h += '<button class="btn sec" onclick="guardarEj(true)">Guardar y siguiente ›</button>';
+
+  h += '<button class="btn sec" onclick="pedirCambio()">Cambiar este ejercicio</button>';
+  if (String(e.origen||''))
+    h += '<p class="meta" style="margin-top:12px">'+esc(e.origen)+'</p>';
 
   $('vEjercicio').innerHTML = h;
 }
@@ -764,11 +794,13 @@ function guardarEj(siguiente){
   var d = {
     s1:$('s0').value.trim(), s2:$('s1').value.trim(),
     s3:$('s2').value.trim(), s4:$('s3').value.trim(),
-    kg:$('kg').value.trim(), rir:$('rir').value, rpe:$('rpe').value
+    kg:$('kg').value.trim(), rir:$('rir').value, rpe:$('rpe').value,
+    apunte:$('apunte') ? $('apunte').value.trim() : ''
   };
   var b = $('btnGuardar'); b.disabled = true; b.textContent = 'Guardando…';
   google.script.run.withSuccessHandler(function(){
     e.s = [d.s1,d.s2,d.s3,d.s4]; e.kg = d.kg; e.rir = d.rir; e.rpe = d.rpe;
+    e.apunte = d.apunte;
     b.disabled = false; b.textContent = 'Guardar';
     toast('Guardado ✓');
     if (siguiente && S.idx < S.ejercicios.length-1) abrirEj(S.idx+1);
@@ -777,6 +809,83 @@ function guardarEj(siguiente){
     b.disabled = false; b.textContent = 'Guardar';
     caducada(err);
   }).guardarEjercicio(S.token, e.fila, d);
+}
+
+/* ─────────────── buscador de la biblioteca ─────────────── */
+function abrirPicker(titulo, sub, volver, alElegir){
+  S.destino = alElegir;
+  ver('vPicker');
+  atras(volver, titulo);
+  var h = '<h2>'+esc(titulo)+'</h2><p class="sub">'+esc(sub)+'</p>'+
+          '<div class="card" style="padding:12px">'+
+            '<input id="buscaEj" type="search" placeholder="Escribe para buscar…" '+
+            'autocomplete="off" oninput="pintarPicker(this.value)" '+
+            'style="width:100%;height:46px;border:1.5px solid var(--borde);'+
+            'border-radius:12px;padding:0 14px">'+
+          '</div><div id="listaEj"></div>';
+  $('vPicker').innerHTML = h;
+  pintarPicker('');
+  var i = $('buscaEj'); if (i) i.focus();
+}
+
+function pintarPicker(q){
+  var t = norm(q || '');
+  var l = S.biblio.filter(function(x){
+    if (!t) return true;
+    return norm(x.n).indexOf(t) >= 0 || norm(x.g).indexOf(t) >= 0 ||
+           norm(x.m).indexOf(t) >= 0;
+  });
+  var tope = l.slice(0, 60);
+  var h = '';
+  if (!S.biblio.length) h = '<div class="vacio">No he podido cargar la biblioteca.</div>';
+  else if (!tope.length) h = '<div class="vacio">Ningún ejercicio con eso.</div>';
+  else tope.forEach(function(x, i){
+    h += '<div class="card pulsable" style="padding:13px 16px" '+
+         'onclick="elegirEj('+i+')"><div class="ej">'+
+         '<div class="ej-txt"><b>'+esc(x.n)+'</b>'+
+         (x.g ? '<small>'+esc(x.g)+(x.m ? ' · '+esc(x.m) : '')+'</small>' : '')+
+         '</div><div class="chev">›</div></div></div>';
+  });
+  if (l.length > tope.length)
+    h += '<div class="vacio" style="padding:14px">Hay '+(l.length-tope.length)+
+         ' más. Afina la búsqueda.</div>';
+  window._picker = tope;
+  $('listaEj').innerHTML = h;
+}
+
+function elegirEj(i){
+  var x = window._picker[i];
+  if (x && S.destino) S.destino(x.n);
+}
+
+/* ─────────────── cambiar / añadir ─────────────── */
+function pedirCambio(){
+  var e = S.ejercicios[S.idx];
+  abrirPicker('Cambiar ejercicio',
+    'Estabas con "'+e.nombre+'". Elige el que hayas hecho en su lugar.',
+    function(){ abrirEj(S.idx); },
+    function(nombre){
+      toast('Cambiando…');
+      google.script.run.withSuccessHandler(function(r){
+        if (r && r.ok === false) return toast(r.msg || 'No se ha podido');
+        toast('Cambiado ✓');
+        abrirDia(S.sem, S.dia);
+      }).withFailureHandler(caducada).cambiarEjercicio(S.token, e.fila, nombre);
+    });
+}
+
+function pedirExtra(){
+  abrirPicker('Añadir ejercicio',
+    'Se añade al final del día de hoy y cuenta en tu volumen.',
+    function(){ abrirDia(S.sem, S.dia); },
+    function(nombre){
+      toast('Añadiendo…');
+      google.script.run.withSuccessHandler(function(r){
+        if (r && r.ok === false) return toast(r.msg || 'No se ha podido');
+        toast('Añadido ✓');
+        abrirDia(S.sem, S.dia);
+      }).withFailureHandler(caducada).anadirEjercicio(S.token, S.sem, S.dia, nombre);
+    });
 }
 
 /* ─────────────── 4. medidas ─────────────── */
