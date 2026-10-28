@@ -499,8 +499,10 @@ function cVer(id){
 function cAtras(fn, titulo){
   var b = $('cAtras');
   b.classList.toggle('oculto', !fn);
-  b.onclick = fn || null;
+  NAV.entrenador = fn || null;
+  b.onclick = fn ? function(){ history.back(); } : null;
   $('cTit').textContent = titulo;
+  if (fn) navPaso();
 }
 
 function cargarPanel(refrescar){
@@ -909,11 +911,36 @@ function ver(id){
   });
   window.scrollTo(0,0);
 }
+/* ─────────────── el botón de atrás del móvil ───────────────
+   La dirección web nunca cambia, así que el móvil no sabe que has
+   navegado dentro de la app y al dar atrás te saca. Por cada pantalla
+   que abre un "Atrás" se apunta un paso en el historial del navegador,
+   y cuando el móvil da marcha atrás se recorre ese paso en vez de salir.
+   El "Atrás" de la cabecera hace exactamente lo mismo, para que los dos
+   caminos no se desincronicen.                                        */
+var NAV = { enPop: false, cliente: null, entrenador: null };
+
+function navPaso(){
+  if (NAV.enPop) return;
+  try { history.pushState({ aj: Date.now() }, ''); } catch (e) {}
+}
+
+window.addEventListener('popstate', function(){
+  var enPanel = !$('coach').classList.contains('oculto');
+  var fn = enPanel ? NAV.entrenador : NAV.cliente;
+  if (!fn) return;          // estamos en la pantalla principal: que salga
+  NAV.enPop = true;
+  try { fn(); } catch (e) {}
+  NAV.enPop = false;
+});
+
 function atras(fn, titulo){
   var b = $('btnAtras');
   b.classList.toggle('oculto', !fn);
-  b.onclick = fn || null;
+  NAV.cliente = fn || null;
+  b.onclick = fn ? function(){ history.back(); } : null;
   $('hTit').textContent = titulo;
+  if (fn) navPaso();
 }
 function caducada(e){
   if (String(e && e.message||'').indexOf('SESION_CADUCADA') >= 0){
