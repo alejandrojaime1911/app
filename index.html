@@ -310,12 +310,8 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
 </script>
 
 <script>
-/* ──────────────────────────────────────────────────────────────────────
-   PUENTE CON GOOGLE
-   Esta pantalla no vive dentro de Google. Habla con Apps Script por fetch,
-   sin sesión de Google de por medio, así que da igual cuántas cuentas
-   tenga el cliente en el móvil.
-   ────────────────────────────────────────────────────────────────────── */
+/* PUENTE CON GOOGLE: la pantalla habla con Apps Script por fetch, sin
+   sesión de Google de por medio. Imita a google.script.run. */
 var API_URL = 'https://script.google.com/macros/s/AKfycbwYxh993dD0iieLgOoxDOEDxvLjZWo7kWQtW1NrcHE8GpKMSAnKa5_tV2ckaSQGHZir/exec';
 
 function _llamar(fn, args, ok, fail) {
@@ -658,7 +654,14 @@ function pintarSemanas(){
     return;
   }
   var h = '<h2>Hola, '+esc(S.nombre.split(' ')[0])+'</h2>'+
-          '<p class="sub">Elige la sesión que vas a hacer hoy.</p>';
+          '<p class="sub">Elige la sesión que vas a hacer hoy.</p>'+
+          '<div class="card oculto" id="cardAvisos">'+
+            '<div class="q-area">Avisos</div>'+
+            '<div class="q-txt" style="font-weight:500">Puedo avisarte el día que '+
+            'toque mandarme la revisión semanal. Solo para eso.</div>'+
+            '<button class="btn sec" style="margin-top:4px" onclick="activarAvisos()">'+
+            'Activar avisos</button>'+
+          '</div>';
   S.semanas.forEach(function(s){
     h += '<div class="semana-tit"><b>SEMANA '+s.n+'</b><span class="linea"></span></div>';
     s.dias.forEach(function(d){
@@ -674,6 +677,7 @@ function pintarSemanas(){
     });
   });
   $('vSemanas').innerHTML = h;
+  repasarAvisos();
 }
 
 /* ─────────────── 2. ejercicios del día ─────────────── */
@@ -829,13 +833,42 @@ function registrarAvisos(codigo){
   if (!ONESIGNAL_APP_ID || !window.OneSignalDeferred) return;
   window.OneSignalDeferred.push(function(OneSignal){
     OneSignal.login(String(codigo)).catch(function(){});
+    repasarAvisos();
     // pequeño margen para que no se le eche encima nada más entrar
     setTimeout(function(){
       try {
         if (OneSignal.Notifications.permission) return;   // ya lo tiene dado
         OneSignal.Slidedown.promptPush();
+        setTimeout(repasarAvisos, 3000);
       } catch (e) {}
     }, 4000);
+  });
+}
+
+/* Deja a mano el botón de activar si todavía no los tiene puestos.
+   Sin esto, el que cierra el aviso la primera vez se queda sin avisos
+   para siempre y sin manera de recuperarlos. */
+function repasarAvisos(){
+  if (!ONESIGNAL_APP_ID || !window.OneSignalDeferred) return;
+  window.OneSignalDeferred.push(function(OneSignal){
+    try { S.avisos = !!OneSignal.Notifications.permission; } catch(e){ S.avisos = true; }
+    var c = $('cardAvisos');
+    if (c) c.classList.toggle('oculto', S.avisos);
+  });
+}
+
+function activarAvisos(){
+  if (!window.OneSignalDeferred) return;
+  window.OneSignalDeferred.push(function(OneSignal){
+    try {
+      OneSignal.Notifications.requestPermission().then(function(){
+        setTimeout(function(){
+          repasarAvisos();
+          if (S.avisos) toast('Avisos activados ✓');
+          else toast('No se han activado. Míralo en los ajustes del navegador.');
+        }, 1200);
+      }).catch(function(){ toast('No he podido activarlos'); });
+    } catch (e) { toast('Este navegador no admite avisos'); }
   });
 }
 
