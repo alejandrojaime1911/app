@@ -655,13 +655,7 @@ function pintarSemanas(){
   }
   var h = '<h2>Hola, '+esc(S.nombre.split(' ')[0])+'</h2>'+
           '<p class="sub">Elige la sesión que vas a hacer hoy.</p>'+
-          '<div class="card oculto" id="cardAvisos">'+
-            '<div class="q-area">Avisos</div>'+
-            '<div class="q-txt" style="font-weight:500">Puedo avisarte el día que '+
-            'toque mandarme la revisión semanal. Solo para eso.</div>'+
-            '<button class="btn sec" style="margin-top:4px" onclick="activarAvisos()">'+
-            'Activar avisos</button>'+
-          '</div>';
+          '<div class="card oculto" id="cardAvisos"></div>';
   S.semanas.forEach(function(s){
     h += '<div class="semana-tit"><b>SEMANA '+s.n+'</b><span class="linea"></span></div>';
     s.dias.forEach(function(d){
@@ -846,29 +840,52 @@ function registrarAvisos(codigo){
 }
 
 /* Deja a mano el botón de activar si todavía no los tiene puestos.
-   Sin esto, el que cierra el aviso la primera vez se queda sin avisos
-   para siempre y sin manera de recuperarlos. */
+   Mira el permiso del propio navegador, no el de OneSignal: si su SDK
+   no arranca, esto tiene que seguir funcionando y contando la verdad. */
 function repasarAvisos(){
-  if (!ONESIGNAL_APP_ID || !window.OneSignalDeferred) return;
-  window.OneSignalDeferred.push(function(OneSignal){
-    try { S.avisos = !!OneSignal.Notifications.permission; } catch(e){ S.avisos = true; }
-    var c = $('cardAvisos');
-    if (c) c.classList.toggle('oculto', S.avisos);
-  });
+  var c = $('cardAvisos');
+  if (!c) return;
+
+  if (!ONESIGNAL_APP_ID || typeof Notification === 'undefined') {
+    c.classList.add('oculto');
+    return;
+  }
+
+  var p = Notification.permission;   // 'default', 'granted' o 'denied'
+  S.avisos = (p === 'granted');
+  c.classList.toggle('oculto', S.avisos);
+  if (S.avisos) return;
+
+  if (p === 'denied') {
+    c.innerHTML =
+      '<div class="q-area">Avisos bloqueados</div>'+
+      '<div class="q-txt" style="font-weight:500">Tu navegador los tiene '+
+      'bloqueados para esta página, así que no puedo preguntarte otra vez.</div>'+
+      '<div class="indic">Toca el icono que hay a la izquierda de la dirección '+
+      'web, arriba → Permisos → Notificaciones → Permitir. Luego recarga.</div>';
+  } else {
+    c.innerHTML =
+      '<div class="q-area">Avisos</div>'+
+      '<div class="q-txt" style="font-weight:500">Puedo avisarte el día que '+
+      'toque mandarme la revisión semanal. Solo para eso.</div>'+
+      '<button class="btn sec" style="margin-top:4px" onclick="activarAvisos()">'+
+      'Activar avisos</button>';
+  }
 }
 
 function activarAvisos(){
-  if (!window.OneSignalDeferred) return;
+  if (!window.OneSignalDeferred) return toast('Los avisos no están disponibles');
+  toast('Pidiendo permiso…');
   window.OneSignalDeferred.push(function(OneSignal){
     try {
-      OneSignal.Notifications.requestPermission().then(function(){
-        setTimeout(function(){
-          repasarAvisos();
-          if (S.avisos) toast('Avisos activados ✓');
-          else toast('No se han activado. Míralo en los ajustes del navegador.');
-        }, 1200);
-      }).catch(function(){ toast('No he podido activarlos'); });
-    } catch (e) { toast('Este navegador no admite avisos'); }
+      OneSignal.Notifications.requestPermission();
+    } catch (e) {
+      try { Notification.requestPermission(); } catch (e2) {}
+    }
+    setTimeout(function(){
+      repasarAvisos();
+      toast(S.avisos ? 'Avisos activados ✓' : 'No se han activado');
+    }, 2500);
   });
 }
 
